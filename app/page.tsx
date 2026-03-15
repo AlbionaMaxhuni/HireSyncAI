@@ -2,96 +2,113 @@
 import { useState } from 'react';
 
 export default function Home() {
-  // Hapi 1: Krijimi i state-eve sipas udhëzuesit [cite: 54, 62, 63]
-  const [input, setInput] = useState(''); // Çfarë shkruan user-i
-  const [loading, setLoading] = useState(false); // Gjendja e ngarkimit
-  const [response, setResponse] = useState(''); // Përgjigja e AI
-  const [error, setError] = useState(''); // Gabimet
+  const [input, setInput] = useState(''); 
+  const [loading, setLoading] = useState(false); 
+  const [response, setResponse] = useState(''); 
+  const [error, setError] = useState(''); 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validim bazë: Mos dërgo request nëse inputi është i zbrazët [cite: 71]
     if (!input.trim()) return;
 
-    // Fillo loading dhe pastro gjendjet e vjetra [cite: 73, 74, 75, 342]
     setLoading(true);
     setError('');
     setResponse('');
 
     try {
-      // Thirrja e API-së lokale (Backend) [cite: 77, 335]
       const res = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: input, description: '' }),
+        body: JSON.stringify({ title: input }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error(`Gabim nga serveri: ${res.status}`); // [cite: 83]
+        throw new Error(data.error || `Gabim: ${res.status}`);
       }
 
-      const data = await res.json();
-      setResponse(data.questions); // Shfaq përgjigjen e AI [cite: 85]
+      setResponse(data.questions); 
     } catch (err: any) {
-      setError(err.message || 'Diçka shkoi gabim. Provo përsëri.'); // [cite: 87]
+      setError(err.message || 'Diçka shkoi gabim.');
     } finally {
-      setLoading(false); // Gjithmonë ndalo loading në fund [cite: 90, 311]
+      setLoading(false); 
     }
   };
 
   return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">HireSync AI</h1>
+    <main className="min-h-screen p-8 max-w-2xl mx-auto bg-gray-50">
+      <h1 className="text-3xl font-bold mb-8 text-blue-900">HireSync AI</h1>
 
-      {/* 1. GJENDJA: INPUT [cite: 17, 96] */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* INPUT STATE */}
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Shkruaj titullin e punës këtu..."
-          className="w-full p-3 border rounded-lg h-32 resize-none"
-          disabled={loading} // Çaktivizohet gjatë loading [cite: 104]
+          placeholder="Shkruaj titullin e punës (p.sh. Software Engineer)..."
+          className="w-full p-4 border border-gray-200 rounded-lg h-32 resize-none focus:ring-2 focus:ring-blue-500 outline-none text-gray-700"
+          disabled={loading}
         />
         <button
           type="submit"
-          disabled={loading || !input.trim()} // Parandalon klikimet e shumëfishta [cite: 107, 322]
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          disabled={loading || !input.trim()}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all font-bold shadow-lg shadow-blue-200"
         >
-          {loading ? 'Duke menduar...' : 'Gjenero Pyetjet'}
+          {loading ? 'Duke gjeneruar...' : 'Gjenero Pyetjet'}
         </button>
       </form>
 
-      {/* 2. GJENDJA: LOADING [cite: 17, 116] */}
+      {/* LOADING STATE */}
       {loading && (
-        <div className="mt-6 flex items-center gap-3 text-gray-500">
-          <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-          <span>AI po gjeneron pyetjet tuaja...</span>
+        <div className="mt-8 space-y-4 animate-pulse">
+          <div className="flex items-center gap-3 text-blue-600 font-medium">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <span>AI po përpilon pyetjet më të mira...</span>
+          </div>
+          <div className="h-24 bg-white rounded-xl border border-gray-100 shadow-sm"></div>
+          <div className="h-24 bg-white rounded-xl border border-gray-100 shadow-sm"></div>
         </div>
       )}
 
-      {/* RESPONSE STATE - E stilizuar si lista profesionale */}
-{response && !loading && (
-  <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span className="bg-green-500 w-2 h-6 rounded-full"></span>
-      Pyetjet e sugjeruara për intervistë:
-    </h2>
-    <div className="grid gap-4">
-      {response.split(/\d\./).filter(q => q.trim()).map((question, index) => (
-        <div 
-          key={index} 
-          className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-        >
-          <div className="flex gap-3">
-            <span className="font-bold text-blue-600">{index + 1}.</span>
-            <p className="text-gray-700 leading-relaxed">{question.trim()}</p>
+      {/* ERROR STATE */}
+      {error && !loading && (
+        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex justify-between items-center shadow-sm">
+          <div>
+            <strong className="font-bold">Gabim: </strong>
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError('')} className="bg-red-200 hover:bg-red-300 rounded-full w-6 h-6 flex items-center justify-center text-red-700 font-bold transition-colors">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* RESPONSE STATE */}
+      {response && !loading && (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <span className="bg-green-500 w-2 h-6 rounded-full"></span>
+            Pyetjet e sugjeruara:
+          </h2>
+          <div className="space-y-4">
+            {response.split(/\d\./).filter(q => q.trim()).map((question, index) => (
+              <div 
+                key={index} 
+                className="p-5 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-600 group"
+              >
+                <div className="flex gap-4">
+                  <span className="flex-shrink-0 w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </span>
+                  <p className="text-gray-700 leading-relaxed font-medium pt-1">
+                    {question.trim()}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
-    </div>
-  </div>
-)}
+      )}
     </main>
   );
 }
