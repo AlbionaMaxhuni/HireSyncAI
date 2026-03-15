@@ -70,20 +70,28 @@ export default function Home() {
         </div>
       )}
 
-      {/* 3. GJENDJA: ERROR [cite: 17, 124] */}
-      {error && !loading && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          <strong>Gabim:</strong> {error}
+      {/* RESPONSE STATE - E stilizuar si lista profesionale */}
+{response && !loading && (
+  <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+      <span className="bg-green-500 w-2 h-6 rounded-full"></span>
+      Pyetjet e sugjeruara për intervistë:
+    </h2>
+    <div className="grid gap-4">
+      {response.split(/\d\./).filter(q => q.trim()).map((question, index) => (
+        <div 
+          key={index} 
+          className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+        >
+          <div className="flex gap-3">
+            <span className="font-bold text-blue-600">{index + 1}.</span>
+            <p className="text-gray-700 leading-relaxed">{question.trim()}</p>
+          </div>
         </div>
-      )}
-
-      {/* 4. GJENDJA: RESPONSE [cite: 17, 136] */}
-      {response && !loading && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <h2 className="font-semibold text-green-800 mb-2">Pyetjet e gjeneruara:</h2>
-          <p className="text-gray-800 whitespace-pre-wrap">{response}</p>
-        </div>
-      )}
+      ))}
+    </div>
+  </div>
+)}
     </main>
   );
 }
