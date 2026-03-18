@@ -1,60 +1,70 @@
-import { NextResponse } from "next/server";
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
-  try {
-    const { title } = await req.json();
-
-    // 1. Marrim API Key nga .env.local
-    // Sigurohu që në .env.local e ke emrin OPENROUTER_API_KEY
-    const apiKey = process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-      console.error("GABIM: API Key nuk u gjet në .env.local");
-      return NextResponse.json(
-        { error: "API Key mungon. Kontrollo skedarin .env.local" },
-        { status: 500 }
-      );
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          // Përdorim metodën zyrtare të Next.js për të marrë vlerën
+          const cookie = cookieStore.get(name)
+          return cookie?.value
+        },
+      },
     }
+  )
 
-    // 2. Thirrja e OpenRouter
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Unauthorized: Ju lutem kyçuni.' },
+      { status: 401 }
+    )
+  }
+
+  try {
+    const { title } = await req.json()
+
+    // Përdorim Llama 3.2 3B që është pothuajse gjithmonë FREE dhe ONLINE
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000", // Opsionale
       },
       body: JSON.stringify({
-        "model": "openrouter/auto",
-        "messages": [
+        model: "openai/gpt-3.5-turbo",
+        messages: [
           {
-            "role": "user",
-            "content": `Ti je një rekrutues profesional. Bazuar në titullin e punës: "${title}", gjenero vetëm 5 pyetje specifike për intervistë. Përgjigju vetëm me listën e pyetjeve pa tekst tjetër shtesë.`
+            role: "user",
+            content: `Je një rekrutues profesional. Gjenero 5 pyetje specifike për intervistë teknike për pozitën: ${title}. Përgjigju vetëm me pyetjet e numeruara.`
           }
         ]
       })
-    });
+    })
 
-    const data = await response.json();
+    const data = await response.json()
 
-    // 3. Kontrolli i përgjigjes
     if (!response.ok) {
-      console.error("OpenRouter Error:", data);
-      return NextResponse.json(
-        { error: data.error?.message || "Gabim nga OpenRouter" },
-        { status: response.status }
-      );
+        console.error("OpenRouter Error Data:", data);
+        throw new Error(data.error?.message || 'Gabim nga OpenRouter');
     }
-
-    const aiText = data.choices[0]?.message?.content || "Nuk u gjenerua asnjë tekst.";
-
-    return NextResponse.json({ questions: aiText });
+    
+    return NextResponse.json({ 
+      questions: data.choices[0].message.content 
+    })
 
   } catch (error: any) {
-    console.error("GABIM KRITIK:", error.message);
+    console.error("API Error:", error)
     return NextResponse.json(
-      { error: "Gabim teknik: " + error.message },
+      { error: error.message || 'Dështoi gjenerimi i pyetjeve.' },
       { status: 500 }
-    );
+    )
   }
 }
