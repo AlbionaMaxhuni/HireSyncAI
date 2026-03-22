@@ -1,6 +1,6 @@
 # 🚀 HireSync AI - Interview Question Generator
 
-HireSync AI është një platformë e fuqizuar nga Inteligjenca Artificiale që ndihmon rekrutuesit të gjenerojnë pyetje teknike për intervista pune. Ky projekt fokusohet në implementimin e një sistemi të sigurt autentifikimi duke përdorur **Supabase Auth** dhe **Next.js**.
+HireSync AI është një platformë e fuqizuar nga Inteligjenca Artificiale që ndihmon rekrutuesit të gjenerojnë pyetje teknike për intervista pune. Ky projekt fokusohet në implementimin e një sistemi të sigurt autentifikimi duke perdorur **Supabase Auth** dhe **Next.js**.
 
 ## 🛠️ Teknologjitë e Përdorura
 - **Framework:** Next.js 14 (App Router)
