@@ -26,7 +26,7 @@ function AuthContent() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  // FIX-I TOTAL: Pastrimi i URL-së që error-i të mos kthehet me refresh
+  // FIX-I FINAL: Shfaqja e kutisë së kuqe dhe pastrimi i URL-së
   useLayoutEffect(() => {
     const method = searchParams.get('method');
     const message = searchParams.get('message');
@@ -34,27 +34,27 @@ function AuthContent() {
     // 1. Nëse vjen nga Logout ose Reset Password
     if (method === 'logout' || window.location.hash.includes('access_token')) {
       setError('');
-      // Fshijmë parametrat nga URL që të mbetet vetëm /login
-      router.replace('/login'); 
+      window.history.replaceState({}, '', '/login');
       return;
     }
 
-    // 2. Nëse vjen sepse s'është i kyçur
+    // 2. Nëse vjen sepse s'është i kyçur (Drejtpërdrejt nga Dashboard)
     if (message === 'auth_required') {
       setError('Please sign in to access your dashboard.');
-      // KRITIKE: E fshijmë mesazhin nga URL menjëherë pasi e shfaqim
-      // Kjo bën që nëse bën refresh, ?message=auth_required nuk është më aty
+      
+      // I japim 500ms kohë React-it ta procesojë Error-in para se të pastrojmë URL-në
       const timer = setTimeout(() => {
-        router.replace('/login');
-      }, 100);
+        window.history.replaceState({}, '', '/login');
+      }, 500);
+
       return () => clearTimeout(timer);
     } 
     
-    // 3. Nëse nuk ka asnjë parametër në URL, sigurohu që error-i është bosh
-    if (!method && !message) {
-      setError('');
+    // 3. Nëse URL është e pastër (refresh i dytë), fshijmë error-in
+    if (!method && !message && !window.location.hash) {
+      // Ky bllok ekzekutohet vetëm në refresh të pastër
     }
-  }, [searchParams, router]);
+  }, [searchParams]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
