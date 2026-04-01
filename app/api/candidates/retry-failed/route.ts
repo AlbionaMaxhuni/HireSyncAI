@@ -30,11 +30,8 @@ export async function POST(req: Request) {
   if (!jobId) return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
 
   const { error, count } = await supabase
-    .from('candidates')
-    .update({ processing_status: 'queued', processing_error: null })
-    .eq('job_id', jobId)
-    .eq('processing_status', 'failed')
-    .select('*', { count: 'exact', head: true })
+  .from('candidates')
+  .select('*', { count: 'exact', head: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
