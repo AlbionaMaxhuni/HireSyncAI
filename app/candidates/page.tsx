@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import Card from '@/components/ui/Card'
 import Skeleton from '@/components/ui/Skeleton'
-import Toast from '@/components/ui/Toast'
+import Toast, { type ToastState } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Users, Briefcase, ArrowRight } from 'lucide-react'
@@ -25,12 +25,6 @@ type Candidate = {
 type Job = {
   id: string
   title: string
-}
-
-type ToastState = {
-  open: boolean
-  type?: 'success' | 'error'
-  message?: string
 }
 
 export default function CandidatesPage() {
@@ -57,7 +51,6 @@ export default function CandidatesPage() {
 
       setLoading(true)
       try {
-        // Jobs map (for titles)
         const jobsRes = await supabase
           .from('jobs')
           .select('id,title')
@@ -69,7 +62,6 @@ export default function CandidatesPage() {
         for (const j of (jobsRes.data ?? []) as Job[]) map[j.id] = j
         setJobsById(map)
 
-        // Candidates list
         const candRes = await supabase
           .from('candidates')
           .select('id,user_id,job_id,full_name,email,score,status,processing_status,created_at')
@@ -115,7 +107,6 @@ export default function CandidatesPage() {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
         {(['total', 'queued', 'processing', 'done', 'failed'] as const).map((k) => (
           <Card key={k} className="p-4">
@@ -128,7 +119,6 @@ export default function CandidatesPage() {
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_360px]">
-        {/* List */}
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-black text-slate-900">All candidates</div>
@@ -199,7 +189,6 @@ export default function CandidatesPage() {
           )}
         </Card>
 
-        {/* Help */}
         <Card className="p-4">
           <div className="text-sm font-black text-slate-900">Next actions</div>
           <p className="mt-2 text-sm font-semibold text-slate-600">
