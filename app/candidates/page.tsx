@@ -7,7 +7,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import Toast, { type ToastState } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/context/AuthContext'
-import { Users, Briefcase, ArrowRight } from 'lucide-react'
+import { Users, Briefcase, ArrowRight, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type Candidate = {
@@ -39,6 +39,9 @@ export default function CandidatesPage() {
   const [loading, setLoading] = useState(true)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [jobsById, setJobsById] = useState<Record<string, Job>>({})
+  
+  // EDGE CASE state: Per te kapur gabimet globale
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -50,7 +53,10 @@ export default function CandidatesPage() {
       }
 
       setLoading(true)
+      setError(null) // Resetojme errorin ne fillim
+
       try {
+        // --- EDGE CASE: Handling API/Network Failure me Try-Catch ---
         const jobsRes = await supabase
           .from('jobs')
           .select('id,title')
@@ -59,6 +65,7 @@ export default function CandidatesPage() {
         if (jobsRes.error) throw jobsRes.error
 
         const map: Record<string, Job> = {}
+        // --- EDGE CASE: Handling null data (Jobs) ---
         for (const j of (jobsRes.data ?? []) as Job[]) map[j.id] = j
         setJobsById(map)
 
@@ -69,10 +76,12 @@ export default function CandidatesPage() {
 
         if (candRes.error) throw candRes.error
 
+        // --- EDGE CASE: Handling empty/null candidates list ---
         setCandidates((candRes.data ?? []) as Candidate[])
       } catch (e: any) {
-        console.error(e)
-        showToast('error', e?.message ?? 'Failed to load candidates.')
+        console.error("Error loading data:", e)
+        setError(e?.message ?? 'Something went wrong while fetching data.')
+        showToast('error', 'Failed to sync with database.')
       } finally {
         setLoading(false)
       }
@@ -82,12 +91,15 @@ export default function CandidatesPage() {
   }, [authLoading, user, router, supabase])
 
   const stats = useMemo(() => {
-    const total = candidates.length
-    const queued = candidates.filter((c) => c.processing_status === 'queued').length
-    const processing = candidates.filter((c) => c.processing_status === 'processing').length
-    const done = candidates.filter((c) => c.processing_status === 'done').length
-    const failed = candidates.filter((c) => c.processing_status === 'failed').length
-    return { total, queued, processing, done, failed }
+    // --- EDGE CASE: Safety check nese candidates eshte undefined ---
+    const list = candidates || []
+    return {
+      total: list.length,
+      queued: list.filter((c) => c.processing_status === 'queued').length,
+      processing: list.filter((c) => c.processing_status === 'processing').length,
+      done: list.filter((c) => c.processing_status === 'done').length,
+      failed: list.filter((c) => c.processing_status === 'failed').length
+    }
   }, [candidates])
 
   return (
@@ -102,10 +114,16 @@ export default function CandidatesPage() {
           <Users size={22} className="text-slate-400" />
           Candidates
         </h1>
-        <p className="mt-1 text-sm font-semibold text-slate-500">
-          Overview of all candidates across your jobs. Open a job to upload resumes and run AI analysis.
-        </p>
       </div>
+
+      {/* ERROR UI: Shfaqet nese ka ndodhur nje crash ne fetch */}
+      {error && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          <AlertCircle size={18} />
+          {error}
+          <button onClick={() => window.location.reload()} className="ml-auto underline">Retry</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
         {(['total', 'queued', 'processing', 'done', 'failed'] as const).map((k) => (
@@ -129,57 +147,35 @@ export default function CandidatesPage() {
             <div className="space-y-2">
               <Skeleton className="h-20" />
               <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
             </div>
-          ) : candidates.length === 0 ? (
+          ) : candidates.length === 0 && !error ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-              No candidates yet. Go to Jobs → open a job → add candidates or bulk upload resumes.
+              No candidates found.
             </div>
           ) : (
             <div className="space-y-2">
               {candidates.map((c) => {
+                // --- EDGE CASE: Handling missing job reference ---
                 const job = jobsById[c.job_id]
-                const title = (c.full_name || 'Candidate').trim()
-                const score = typeof c.score === 'number' ? c.score : null
-
+                const title = (c.full_name || 'Anonymous Candidate').trim()
+                
                 return (
-                  <div
-                    key={c.id}
-                    className="rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200"
-                  >
+                  <div key={c.id} className="rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-black text-slate-900">{title}</div>
-
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
-                          <span className="inline-flex items-center gap-1">
-                            <Briefcase size={14} className="text-slate-400" />
-                            {job?.title ?? 'Job'}
-                          </span>
-
+                          <Briefcase size={14} /> {job?.title ?? 'Unknown Job'}
                           <span className="text-slate-300">•</span>
-                          <span>{new Date(c.created_at).toLocaleDateString()}</span>
-
-                          <span className="text-slate-300">•</span>
-                          <span className="capitalize">{c.processing_status ?? '—'}</span>
-
-                          {score !== null && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="rounded-xl bg-blue-50 px-2 py-0.5 font-black text-blue-700">
-                                Score: {score}
-                              </span>
-                            </>
-                          )}
+                          <span className="capitalize text-blue-600">{c.processing_status}</span>
                         </div>
                       </div>
-
-                      <button
+                      <button 
+                        disabled={loading}
                         onClick={() => router.push(`/jobs/${c.job_id}`)}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50"
-                        title="Open job"
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black hover:bg-slate-50 disabled:opacity-50"
                       >
-                        Open job <ArrowRight size={14} className="text-slate-400" />
+                        View Job
                       </button>
                     </div>
                   </div>
@@ -190,20 +186,13 @@ export default function CandidatesPage() {
         </Card>
 
         <Card className="p-4">
-          <div className="text-sm font-black text-slate-900">Next actions</div>
-          <p className="mt-2 text-sm font-semibold text-slate-600">
-            Upload resumes and run AI analysis inside each job page.
-          </p>
+          <div className="text-sm font-black text-slate-900">Actions</div>
           <button
             onClick={() => router.push('/jobs')}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-600"
+            className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white hover:bg-blue-600 transition-colors"
           >
             Go to Jobs
           </button>
-
-          <div className="mt-4 text-xs font-semibold text-slate-400">
-            Tip: queued → process queue → done (score + insights).
-          </div>
         </Card>
       </div>
     </AppShell>
