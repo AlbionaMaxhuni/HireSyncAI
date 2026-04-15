@@ -1,68 +1,122 @@
-# 🚀 HireSync AI - Intelligent Recruitment & Candidate Ranking
+# HireSync AI
 
-**HireSync AI** është një platformë "Full-stack" e fuqizuar nga Inteligjenca Artificiale, e krijuar për të transformuar procesin e rekrutimit. Aplikacioni automatizon analizën e CV-ve, krahason aftësitë e kandidatëve me kërkesat e punës dhe gjeneron një renditje inteligjente të aplikantëve më të mirë.
+HireSync AI is a full-stack recruitment assistant built to help recruiters create jobs, upload resumes, process candidates with AI, and review ranked results in one workspace.
 
----
+## Live Demo
 
-## 🌐 Live Demo
-Projekti është i deplojuar dhe mund të vizitohet live këtu:  
-👉 **[HireSync AI - Live on Vercel](https://hire-sync-ai-nine.vercel.app)**
+Live URL: https://hire-sync-ai-nine.vercel.app
 
----
+## What The Project Does
 
-## 🎯 Si funksionon HireSync AI?
+The app supports this recruiter flow:
 
-Sistemi ndjek një rrjedhë logjike të strukturuar për të optimizuar punën e rekrutuesve:
+1. Sign in securely with Supabase Auth.
+2. Create a job with title and description.
+3. Upload multiple PDF or DOCX resumes.
+4. Queue and process candidates through AI analysis.
+5. Review candidate score, red flags, interview questions, and shortlist status.
 
-1.  **Skanimi Inteligjent:** Sistemi pranon CV-të dhe nxjerr informacionet kyçe përmes AI.
-2.  **Krahasimi me Job Description:** AI analizon përputhshmërinë e kandidatit me pozicionin specifik.
-3.  **Vlerësimi (Scoring):** Çdo kandidat merr një pikëzim (score) bazuar në algoritmet e AI.
-4.  **Renditja (Ranking):** Sistemi gjeneron automatikisht listën e "Top Candidates".
-5.  **Feedback-u i Detajuar:** Shpjegime specifike për pikat e forta dhe fushat për përmirësim.
+## Main Features
 
----
+- Recruiter authentication with protected routes
+- Job creation and job-based candidate management
+- Bulk resume upload to Supabase Storage
+- Resume parsing for PDF and DOCX files
+- AI-based candidate scoring and interview question generation
+- Candidate leaderboard with processing states
+- Retry flow for failed candidate processing
 
-## ✨ Karakteristikat Kryesore (Features)
+## Tech Stack
 
-- **AI-Powered Screening:** Analizë automatike duke përdorur modele si GPT-4/Claude përmes OpenRouter.
-- **Candidate Ranking Logic:** Renditje automatike sipas meritës.
-- **Real-time Persistence:** Ruajtja e plotë e të dhënave në Supabase.
-- **Row Level Security (RLS):** Siguri maksimale – rekrutuesit shohin vetëm të dhënat e tyre.
-- **Mobile Responsive:** Ndërfaqe moderne me Tailwind CSS.
+- Frontend: Next.js, React, Tailwind CSS
+- Backend: Next.js Route Handlers
+- Database/Auth/Storage: Supabase
+- AI Integration: OpenRouter
+- Deployment: Vercel
 
----
+## Local Setup
 
-## 🛠️ Teknologjitë (Tech Stack)
+1. Clone the repository:
 
-| Shtylla | Teknologjia |
-| :--- | :--- |
-| **Frontend** | Next.js 15 (App Router), Tailwind CSS, Framer Motion |
-| **Backend & Auth** | Supabase SSR, PostgreSQL |
-| **AI Integration** | OpenRouter API (LLM Orchestration) |
-| **Infrastructure** | Vercel (Deployment) |
+```bash
+git clone https://github.com/AlbionaMaxhuni/HireSyncAI.git
+cd HireSyncAI
+```
 
----
+2. Install dependencies:
 
-## 🛡️ Robustness & Edge Case Handling
+```bash
+npm install
+```
 
-Ky projekt shkon përtej funksionalitetit bazë duke trajtuar raste kritike (Edge Cases) për të garantuar stabilitetin e UI:
+3. Create a `.env.local` file and add:
 
-* **Handling Null Responses:** Përdorimi i *Nullish Coalescing* `(data ?? [])` për të parandaluar crash-et e UI në rast se databaza kthen përgjigje boshe ose ka probleme rrjeti.
-* **Relational Integrity:** Implementimi i *Optional Chaining* për të menaxhuar rastet kur një kandidat është i lidhur me një pozicion pune (Job) që mund të jetë fshirë.
-* **Graceful Error Recovery:** Përdorimi i blloqeve `try-catch-finally` për të kapur dështimet e API-së, duke i njoftuar përdoruesit përmes *Toast notifications* në vend të "Runtime Crash".
-* **Safe Loading States:** Menaxhimi i gjendjeve të ngarkimit për të parandaluar "infinite loading" gjatë dështimeve të kërkesave asinkrone.
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+```
 
----
+4. Run the development server:
 
-## 🔒 Siguria e të Dhënave
+```bash
+npm run dev
+```
 
-Projekti zbaton **PostgreSQL RLS Policies**:
-- Aksesi kontrollohet përmes `auth.uid()`, duke siguruar privatësi totale midis rekrutuesve të ndryshëm.
+5. Open `http://localhost:3000`
 
----
+## Required Environment Variables
 
-## 🚀 Instalimi Lokalisht
+These variables are required for local development and deployment:
 
-1. **Klononi repozitorin:**
-   ```bash
-   git clone [https://github.com/AlbionaMaxhuni/HireSyncAI.git](https://github.com/AlbionaMaxhuni/HireSyncAI.git)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENROUTER_API_KEY`
+
+The API routes already return clear error responses when critical environment variables are missing.
+
+## Debug, Review & Hardening Pass
+
+This project was improved with a focused review pass covering bug fixing, UX feedback, cleanup, and documentation.
+
+### 1. Bug Fixed
+
+- Fixed the failed-candidate retry flow.
+- The `retry-failed` API route now correctly validates the job, finds failed candidates for that job, moves them back to `queued`, and clears the previous processing error.
+
+### 2. UX / Feedback Improved
+
+- Improved feedback on the job detail page by adding a visible `Retry failed` action.
+- Updated the processing message so it matches the real behavior: queue processing runs automatically until the queue is empty.
+- Existing loading/disabled states continue to reduce duplicate submits during processing.
+
+### 3. Refactor / Cleanup
+
+- Replaced several unsafe `any` usages with safer typing.
+- Added small reusable error-message helpers to simplify repeated error handling.
+- Improved parser typing and cleanup in the resume parsing flow.
+- Cleaned up smaller lint issues so the project now passes `npm run lint`.
+
+### 4. README Update
+
+- Rewrote the README for clearer setup instructions, environment variables, project overview, and review-pass summary.
+
+## Quality Notes
+
+The project now includes handling for several edge cases:
+
+- unauthenticated users are redirected to login
+- failed requests show user-facing feedback
+- missing database data is handled with safe fallbacks in multiple pages
+- missing environment variables return explicit API errors
+- failed candidate processing can be retried from the UI
+
+## Verification
+
+```bash
+npm run lint
+```
+
+Lint passes after the latest cleanup.
