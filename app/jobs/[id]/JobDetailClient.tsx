@@ -35,7 +35,7 @@ type Candidate = {
   email: string | null
   resume_text: string
   score: number | null
-  red_flags: any | null
+  red_flags: string[] | null
   interview_questions: string | null
   status: 'new' | 'shortlisted' | 'rejected'
   created_at: string
@@ -50,6 +50,17 @@ type AiJson = {
   score: number
   red_flags: string[]
   interview_questions: string[]
+}
+
+type AiResponsePayload = {
+  score?: number
+  red_flags?: unknown[]
+  interview_questions?: unknown[]
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return String(error ?? 'Unknown error')
 }
 
 function extractOpenRouterTextFromSSEChunk(sseChunk: string) {
@@ -72,7 +83,7 @@ function extractOpenRouterTextFromSSEChunk(sseChunk: string) {
 
 function safeParseAiJson(text: string): AiJson | null {
   try {
-    const parsed = JSON.parse(text)
+    const parsed = JSON.parse(text) as AiResponsePayload
     if (
       typeof parsed?.score === 'number' &&
       Array.isArray(parsed?.red_flags) &&
@@ -80,8 +91,8 @@ function safeParseAiJson(text: string): AiJson | null {
     ) {
       return {
         score: Math.max(1, Math.min(100, Math.round(parsed.score))),
-        red_flags: parsed.red_flags.map((x: any) => String(x)),
-        interview_questions: parsed.interview_questions.map((x: any) => String(x)),
+        red_flags: parsed.red_flags.map((x) => String(x)),
+        interview_questions: parsed.interview_questions.map((x) => String(x)),
       }
     }
   } catch {}
@@ -132,6 +143,7 @@ export default function JobDetailClient({
   const [draftById, setDraftById] = useState<Record<string, string>>({})
   const [processing, setProcessing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [retryingFailed, setRetryingFailed] = useState(false)
 
   const sortedCandidates = useMemo(() => {
     // Leaderboard: scored first desc, then unscored
@@ -204,11 +216,33 @@ export default function JobDetailClient({
       }
 
       showToast('success', `Processed total: ${total}`)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      showToast('error', e?.message ?? 'Process failed.')
+      showToast('error', getErrorMessage(e))
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const retryFailedCandidates = async () => {
+    setRetryingFailed(true)
+    try {
+      const res = await fetch('/api/candidates/retry-failed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      })
+
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error ?? 'Retry failed')
+
+      await refreshCandidates()
+      showToast('success', `Moved back to queue: ${Number(json?.retried ?? 0)}`)
+    } catch (e: unknown) {
+      console.error(e)
+      showToast('error', getErrorMessage(e))
+    } finally {
+      setRetryingFailed(false)
     }
   }
 
@@ -362,9 +396,9 @@ export default function JobDetailClient({
 
       setCandidates((prev) => prev.map((x) => (x.id === c.id ? (data as Candidate) : x)))
       showToast('success', 'Insights saved.')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      showToast('error', err?.message ?? 'Analyze failed.')
+      showToast('error', getErrorMessage(err))
     } finally {
       setAnalyzingId(null)
     }
@@ -599,10 +633,18 @@ export default function JobDetailClient({
                   <Play size={16} />
                   {processing ? 'Processing…' : 'Start processing'}
                 </button>
+                <button
+                  onClick={retryFailedCandidates}
+                  disabled={retryingFailed || counts.failed === 0}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-30"
+                >
+                  <RefreshCcw size={16} />
+                  {retryingFailed ? 'Retrying…' : 'Retry failed'}
+                </button>
               </div>
 
               <div className="mt-2 text-xs font-semibold text-slate-500">
-                Tip: Click “Start processing” multiple times until queued becomes 0.
+                Processing now runs automatically until the queue is empty. Use “Retry failed” if parsing or AI analysis previously failed.
               </div>
             </Card>
 

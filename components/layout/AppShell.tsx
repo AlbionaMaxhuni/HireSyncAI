@@ -3,12 +3,12 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Sparkles, LayoutDashboard, Briefcase, Users } from 'lucide-react'
+import { Sparkles, LayoutDashboard, Briefcase, Users, type LucideIcon } from 'lucide-react'
 
 type NavItem = {
   label: string
   href: string
-  icon: any
+  icon: LucideIcon
 }
 
 const nav: NavItem[] = [

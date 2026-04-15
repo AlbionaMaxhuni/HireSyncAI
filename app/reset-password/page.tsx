@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Lock, Eye, EyeOff, Sparkles, CheckCircle2, AlertCircle, ChevronRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ChevronRight } from 'lucide-react';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');

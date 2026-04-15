@@ -27,6 +27,13 @@ type Job = {
   title: string
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return 'Failed to load candidates.'
+}
+
+const statKeys = ['total', 'queued', 'processing', 'done', 'failed'] as const
+
 export default function CandidatesPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -70,9 +77,9 @@ export default function CandidatesPage() {
         if (candRes.error) throw candRes.error
 
         setCandidates((candRes.data ?? []) as Candidate[])
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e)
-        showToast('error', e?.message ?? 'Failed to load candidates.')
+        showToast('error', getErrorMessage(e))
       } finally {
         setLoading(false)
       }
@@ -108,12 +115,10 @@ export default function CandidatesPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-        {(['total', 'queued', 'processing', 'done', 'failed'] as const).map((k) => (
+        {statKeys.map((k) => (
           <Card key={k} className="p-4">
             <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">{k}</div>
-            <div className="mt-1 text-2xl font-black text-slate-900">
-              {loading ? '…' : String((stats as any)[k])}
-            </div>
+            <div className="mt-1 text-2xl font-black text-slate-900">{loading ? '…' : String(stats[k])}</div>
           </Card>
         ))}
       </div>

@@ -37,6 +37,11 @@ type Message = {
   created_at: string
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return 'Something went wrong.'
+}
+
 function MetricCard({
   label,
   value,
@@ -455,9 +460,9 @@ export default function DashboardPage() {
           prev.map((c) => (c.id === convId ? { ...c, title: prompt.slice(0, 50) } : c))
         )
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      showToast('error', err?.message ?? 'Something went wrong.')
+      showToast('error', getErrorMessage(err))
     } finally {
       setIsSending(false)
       setTab('chat')

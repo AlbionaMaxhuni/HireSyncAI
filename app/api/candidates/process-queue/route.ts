@@ -12,9 +12,20 @@ type AiJson = {
   interview_questions: string[]
 }
 
+type AiResponsePayload = {
+  score?: number
+  red_flags?: unknown[]
+  interview_questions?: unknown[]
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return String(error ?? 'Unknown error')
+}
+
 function safeParseAiJson(text: string): AiJson | null {
   try {
-    const parsed = JSON.parse(text)
+    const parsed = JSON.parse(text) as AiResponsePayload
     if (
       typeof parsed?.score === 'number' &&
       Array.isArray(parsed?.red_flags) &&
@@ -22,8 +33,8 @@ function safeParseAiJson(text: string): AiJson | null {
     ) {
       return {
         score: Math.max(1, Math.min(100, Math.round(parsed.score))),
-        red_flags: parsed.red_flags.map((x: any) => String(x)),
-        interview_questions: parsed.interview_questions.map((x: any) => String(x)),
+        red_flags: parsed.red_flags.map((x) => String(x)),
+        interview_questions: parsed.interview_questions.map((x) => String(x)),
       }
     }
   } catch {}
@@ -200,12 +211,12 @@ export async function POST(req: Request) {
       if (upd.error) throw new Error(upd.error.message)
 
       processed++
-    } catch (e: any) {
+    } catch (e: unknown) {
       await supabase
         .from('candidates')
         .update({
           processing_status: 'failed',
-          processing_error: String(e?.message ?? e ?? 'Unknown error'),
+          processing_error: getErrorMessage(e),
         })
         .eq('id', candidateId)
     }

@@ -5,6 +5,34 @@ export type ParsedResume = {
   text: string
 }
 
+type Pdf2JsonTextRun = {
+  T?: string
+}
+
+type Pdf2JsonText = {
+  R?: Pdf2JsonTextRun[]
+}
+
+type Pdf2JsonPage = {
+  Texts?: Pdf2JsonText[]
+}
+
+type Pdf2JsonData = {
+  Pages?: Pdf2JsonPage[]
+}
+
+type Pdf2JsonError = {
+  parserError?: string
+}
+
+type PdfParserInstance = {
+  on(event: 'pdfParser_dataError', handler: (error: Pdf2JsonError) => void): void
+  on(event: 'pdfParser_dataReady', handler: (data: Pdf2JsonData) => void): void
+  parseBuffer(buffer: Buffer): void
+}
+
+type PdfParserConstructor = new () => PdfParserInstance
+
 function normalizeText(t: string) {
   return t
     .replace(/\r/g, '\n')
@@ -15,16 +43,16 @@ function normalizeText(t: string) {
 
 async function parsePdfWithPdf2Json(bytes: ArrayBuffer): Promise<string> {
   const require = createRequire(import.meta.url)
-  const PDFParser = require('pdf2json') as any
+  const PDFParser = require('pdf2json') as PdfParserConstructor
 
   const pdfParser = new PDFParser()
 
   return await new Promise<string>((resolve, reject) => {
-    pdfParser.on('pdfParser_dataError', (err: any) => {
+    pdfParser.on('pdfParser_dataError', (err) => {
       reject(new Error(err?.parserError ?? 'PDF parse error'))
     })
 
-    pdfParser.on('pdfParser_dataReady', (data: any) => {
+    pdfParser.on('pdfParser_dataReady', (data) => {
       try {
         // Extract text from pages
         const pages = data?.Pages ?? []
@@ -43,8 +71,8 @@ async function parsePdfWithPdf2Json(bytes: ArrayBuffer): Promise<string> {
         }
 
         resolve(texts.join(' '))
-      } catch (e: any) {
-        reject(new Error(e?.message ?? 'Failed to extract PDF text'))
+      } catch (e: unknown) {
+        reject(new Error(e instanceof Error ? e.message : 'Failed to extract PDF text'))
       }
     })
 

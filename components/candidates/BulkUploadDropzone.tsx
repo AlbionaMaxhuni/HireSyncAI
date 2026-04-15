@@ -7,6 +7,11 @@ type Props = {
   onUploaded?: (created: number) => void
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return 'Upload failed'
+}
+
 function isAllowed(file: File) {
   const name = (file.name || '').toLowerCase()
   return name.endsWith('.pdf') || name.endsWith('.docx')
@@ -47,8 +52,8 @@ export default function BulkUploadDropzone({ jobId, onUploaded }: Props) {
         const created = Number(json?.created ?? 0)
         setLastMsg(`Uploaded: ${created} candidate(s).`)
         onUploaded?.(created)
-      } catch (e: any) {
-        setLastMsg(e?.message ?? 'Upload failed')
+      } catch (e: unknown) {
+        setLastMsg(getErrorMessage(e))
       } finally {
         setUploading(false)
       }

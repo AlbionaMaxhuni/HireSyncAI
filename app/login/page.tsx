@@ -1,5 +1,5 @@
 'use client';
-import { useState, useLayoutEffect, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -25,19 +25,19 @@ function AuthContent() {
   const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const urlNotice = useMemo(() => {
+    return searchParams.get('message') === 'auth_required'
+      ? 'Please sign in to access your dashboard.'
+      : '';
+  }, [searchParams]);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 5000);
   };
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const method = searchParams.get('method');
-    const message = searchParams.get('message');
-
-    // Clear both at start of handling URL messages
-    setError('');
-    setNotice('');
 
     // 1) From logout or reset callback hash
     if (method === 'logout' || window.location.hash.includes('access_token')) {
@@ -45,18 +45,13 @@ function AuthContent() {
       return;
     }
 
-    // 2) Not signed in (redirected by middleware)
-    if (message === 'auth_required') {
-      setNotice('Please sign in to access your dashboard.');
-
+    if (searchParams.get('message') === 'auth_required') {
       const timer = setTimeout(() => {
         window.history.replaceState({}, '', '/login');
       }, 500);
 
       return () => clearTimeout(timer);
     }
-
-    // 3) If URL clean: nothing to do
   }, [searchParams]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -128,9 +123,9 @@ function AuthContent() {
 
         <form onSubmit={authMode === 'forgot' ? handleResetPassword : handleAuth} className="space-y-5">
           {/* Notice (info) */}
-          {notice && (
+          {(notice || urlNotice) && (
             <div className="p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-[11px] font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-              <Info size={14} className="shrink-0 text-slate-500" /> {notice}
+              <Info size={14} className="shrink-0 text-slate-500" /> {notice || urlNotice}
             </div>
           )}
 
