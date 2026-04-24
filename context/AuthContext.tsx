@@ -1,42 +1,95 @@
-// context/AuthContext.tsx
-'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import { User } from '@supabase/supabase-js';
+'use client'
 
-const AuthContext = createContext<{ user: User | null; loading: boolean }>({ 
-  user: null, 
-  loading: true 
-});
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { getExplicitUserRole, type UserRole } from '@/lib/auth'
+import type { WorkspaceSummary } from '@/lib/workspace'
+import { createClient } from '@/utils/supabase/client'
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [supabase] = useState(() => createClient());
+type AuthContextValue = {
+  user: User | null
+  role: UserRole | null
+  workspace: WorkspaceSummary | null
+  loading: boolean
+}
+
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  role: null,
+  workspace: null,
+  loading: true,
+})
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [role, setRole] = useState<UserRole | null>(null)
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [supabase] = useState(() => createClient())
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
-    };
+    let active = true
 
-    getSession();
+    const syncSession = async (nextUser?: User | null) => {
+      const resolvedUser =
+        nextUser !== undefined
+          ? nextUser
+          : (
+              await supabase.auth.getSession()
+            ).data.session?.user ?? null
 
-    // Dëgjon nëse useri bën Login ose Logout në tabe të tjera
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      if (!active) return
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+      setUser(resolvedUser)
 
-  return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+      if (!resolvedUser) {
+        setRole(null)
+        setWorkspace(null)
+        setLoading(false)
+        return
+      }
 
-export const useAuth = () => useContext(AuthContext);
+      try {
+        const response = await fetch('/api/auth/session-role', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        })
+
+        const payload = (await response.json().catch(() => null)) as {
+          role?: UserRole | null
+          workspace?: WorkspaceSummary | null
+        } | null
+        setRole(payload?.role ?? getExplicitUserRole(resolvedUser))
+        setWorkspace(payload?.workspace ?? null)
+      } catch {
+        setRole(getExplicitUserRole(resolvedUser))
+        setWorkspace(null)
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void syncSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoading(true)
+      void syncSession(session?.user ?? null)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  return <AuthContext.Provider value={{ user, role, workspace, loading }}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  return useContext(AuthContext)
+}

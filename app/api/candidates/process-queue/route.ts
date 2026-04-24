@@ -1,48 +1,47 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { parseResume } from '@/lib/resume/parseResume'
+import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
 
 type AiJson = {
   score: number
+  seniority: string
+  status_suggestion: 'screening' | 'interview' | 'rejected'
+  summary: string
+  skills: string[]
   red_flags: string[]
   interview_questions: string[]
 }
 
-type AiResponsePayload = {
-  score?: number
-  red_flags?: unknown[]
-  interview_questions?: unknown[]
-}
-
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
-  return String(error ?? 'Unknown error')
+  return 'Unknown processing error'
 }
 
 function safeParseAiJson(text: string): AiJson | null {
   try {
-    const parsed = JSON.parse(text) as AiResponsePayload
-    if (
-      typeof parsed?.score === 'number' &&
-      Array.isArray(parsed?.red_flags) &&
-      Array.isArray(parsed?.interview_questions)
-    ) {
-      return {
-        score: Math.max(1, Math.min(100, Math.round(parsed.score))),
-        red_flags: parsed.red_flags.map((x) => String(x)),
-        interview_questions: parsed.interview_questions.map((x) => String(x)),
-      }
-    }
-  } catch {}
-  return null
-}
+    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
+    const parsed = JSON.parse(cleaned) as Partial<AiJson>
 
-function formatQuestionsText(qs: string[]) {
-  return qs.map((q, i) => `${i + 1}) ${q}`).join('\n')
+    return {
+      score: Math.max(1, Math.min(100, Math.round(parsed.score ?? 0))),
+      seniority: String(parsed.seniority ?? 'Junior'),
+      status_suggestion:
+        parsed.status_suggestion === 'interview' || parsed.status_suggestion === 'rejected'
+          ? parsed.status_suggestion
+          : 'screening',
+      summary: String(parsed.summary ?? ''),
+      skills: Array.isArray(parsed.skills) ? parsed.skills.map(String) : [],
+      red_flags: Array.isArray(parsed.red_flags) ? parsed.red_flags.map(String) : [],
+      interview_questions: Array.isArray(parsed.interview_questions)
+        ? parsed.interview_questions.map(String)
+        : [],
+    }
+  } catch {
+    return null
+  }
 }
 
 async function aiAnalyze(jobTitle: string, jobDescription: string, resumeText: string) {
@@ -55,170 +54,151 @@ async function aiAnalyze(jobTitle: string, jobDescription: string, resumeText: s
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'openai/gpt-3.5-turbo',
-      stream: false,
-      temperature: 0.2,
+      model: 'openai/gpt-4o-mini',
+      temperature: 0.1,
       messages: [
         {
           role: 'system',
-          content: [
-            'You are an unbiased senior recruiter.',
-            'Return ONLY valid JSON. No markdown. No extra text.',
-            'Schema: { "score": number (1-100), "red_flags": string[], "interview_questions": string[] }',
-            'Scoring rules:',
-            '- If resume lacks evidence, score must be low.',
-            '- Always return at least 2 red_flags (minor concerns if none).',
-          ].join('\n'),
+          content: `You are an expert AI recruiter. Return ONLY valid JSON.
+Schema:
+{
+  "score": number,
+  "seniority": "Intern"|"Junior"|"Mid"|"Senior"|"Lead",
+  "status_suggestion": "screening"|"interview"|"rejected",
+  "summary": "2 sentence summary with strengths and gaps",
+  "skills": string[],
+  "red_flags": string[],
+  "interview_questions": string[]
+}`,
         },
         {
           role: 'user',
-          content: [
-            `JOB TITLE: ${jobTitle}`,
-            `JOB DESCRIPTION:\n${jobDescription}`,
-            ``,
-            `RESUME TEXT:\n${resumeText}`,
-            ``,
-            `Return JSON only.`,
-          ].join('\n'),
+          content: `Analyze this resume for the ${jobTitle} role.\nJob description: ${jobDescription}\nResume: ${resumeText}`,
         },
       ],
+      response_format: { type: 'json_object' },
     }),
   })
 
   if (!upstream.ok) {
-    const errText = await upstream.text().catch(() => '')
-    throw new Error(`OpenRouter error (${upstream.status}): ${errText || 'Unknown error'}`)
+    const errorText = await upstream.text().catch(() => '')
+    throw new Error(errorText || `AI provider returned ${upstream.status}`)
   }
 
-  const json = await upstream.json()
-  const text = json?.choices?.[0]?.message?.content
-  if (typeof text !== 'string') throw new Error('Invalid AI response')
+  const json = (await upstream.json()) as {
+    choices?: Array<{ message?: { content?: string } }>
+  }
+
+  const text = json.choices?.[0]?.message?.content
+  if (!text) throw new Error('AI provider returned an empty response')
 
   const parsed = safeParseAiJson(text)
-  if (!parsed) throw new Error('Could not parse AI JSON')
+  if (!parsed) throw new Error('Could not parse AI JSON response')
 
   return parsed
 }
 
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-
-  // user client (RLS)
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
-
-  // admin client (bypass RLS for storage)
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { supabase, user, role } = await getOptionalServerUserWithRole()
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
   }
 
-  const body = await req.json().catch(() => null)
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  )
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const body = (await req.json().catch(() => null)) as { jobId?: string; limit?: number } | null
   const jobId = String(body?.jobId ?? '')
-  const limit = Math.max(1, Math.min(50, Number(body?.limit ?? 10)))
+  const limit = Math.max(1, Math.min(10, Number(body?.limit ?? 5)))
 
-  if (!jobId) return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
+  if (!jobId) {
+    return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
+  }
 
-  // Load job (RLS ensures job belongs to the user)
-  const { data: job, error: jobErr } = await supabase
-    .from('jobs')
-    .select('id,title,description')
-    .eq('id', jobId)
-    .maybeSingle()
+  const { data: job, error: jobError } = await supabase.from('jobs').select('*').eq('id', jobId).single()
+  if (jobError || !job) {
+    return NextResponse.json({ error: jobError?.message ?? 'Job not found' }, { status: 404 })
+  }
 
-  if (jobErr || !job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
-
-  // Get queued candidates
-  const { data: queued, error: qErr } = await supabase
+  const { data: queued, error: queuedError } = await supabase
     .from('candidates')
-    .select('id,resume_file_path,source_filename')
+    .select('*')
     .eq('job_id', jobId)
     .eq('processing_status', 'queued')
     .order('created_at', { ascending: true })
     .limit(limit)
 
-  if (qErr) return NextResponse.json({ error: 'Failed to fetch queue' }, { status: 500 })
-  if (!queued?.length) return NextResponse.json({ ok: true, processed: 0 })
+  if (queuedError) {
+    return NextResponse.json({ error: queuedError.message }, { status: 500 })
+  }
+
+  if (!queued?.length) {
+    return NextResponse.json({ ok: true, processed: 0 })
+  }
 
   let processed = 0
 
-  for (const c of queued) {
-    const candidateId = c.id as string
-    const path = c.resume_file_path as string | null
-    const filename = (c.source_filename as string | null) || 'resume'
-
-    if (!path) {
-      await supabase
-        .from('candidates')
-        .update({ processing_status: 'failed', processing_error: 'Missing resume_file_path' })
-        .eq('id', candidateId)
-      continue
-    }
-
-    // mark processing
-    await supabase.from('candidates').update({ processing_status: 'processing' }).eq('id', candidateId)
-
+  for (const candidate of queued) {
     try {
-      // IMPORTANT: download with admin client (no RLS issues)
-      const dl = await supabaseAdmin.storage.from('resumes').download(path)
-      if (dl.error || !dl.data) throw new Error(dl.error?.message ?? 'Download failed')
+      await supabase.from('candidates').update({ processing_status: 'processing' }).eq('id', candidate.id)
 
-      const bytes = await dl.data.arrayBuffer()
-      const parsed = await parseResume(filename, bytes)
-
-      if (!parsed.text || parsed.text.length < 50) {
-        throw new Error('Could not extract enough text from resume')
+      if (!candidate.resume_file_path) {
+        throw new Error('Resume file missing for queued candidate')
       }
 
-      const ai = await aiAnalyze(job.title, job.description, parsed.text)
-      const questionsText = formatQuestionsText(ai.interview_questions)
+      const download = await supabaseAdmin.storage.from('resumes').download(candidate.resume_file_path)
+      if (download.error) throw download.error
 
-      const upd = await supabase
+      const parsedResume = await parseResume(
+        candidate.source_filename || 'resume.pdf',
+        await download.data.arrayBuffer()
+      )
+
+      const ai = await aiAnalyze(job.title, job.description, parsedResume.text || '')
+      const recommendedNextStep =
+        ai.status_suggestion === 'interview'
+          ? 'Recommended next step: interview.'
+          : ai.status_suggestion === 'rejected'
+            ? 'Recommended next step: careful rejection review.'
+            : 'Recommended next step: screening review.'
+
+      await supabaseAdmin
         .from('candidates')
         .update({
-          resume_text: parsed.text,
+          resume_text: parsedResume.text,
           score: ai.score,
+          seniority: ai.seniority,
+          summary: [ai.summary, recommendedNextStep].filter(Boolean).join(' '),
+          skills: ai.skills,
           red_flags: ai.red_flags,
-          interview_questions: questionsText,
+          interview_questions: ai.interview_questions.join('\n'),
+          status: 'screening',
           processing_status: 'done',
           processing_error: null,
         })
-        .eq('id', candidateId)
+        .eq('id', candidate.id)
 
-      if (upd.error) throw new Error(upd.error.message)
-
-      processed++
-    } catch (e: unknown) {
+      processed += 1
+    } catch (error: unknown) {
       await supabase
         .from('candidates')
         .update({
           processing_status: 'failed',
-          processing_error: getErrorMessage(e),
+          processing_error: getErrorMessage(error),
         })
-        .eq('id', candidateId)
+        .eq('id', candidate.id)
     }
   }
 

@@ -1,9 +1,26 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Sparkles, LayoutDashboard, Briefcase, Users, type LucideIcon } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  UserPlus,
+  Settings,
+  BarChart3,
+  ShieldCheck,
+  ChevronDown,
+  House,
+  LogOut,
+  type LucideIcon,
+} from 'lucide-react'
+import Logo from '@/components/branding/Logo'
+import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/context/AuthContext'
+import { getUserDisplayName } from '@/lib/auth'
+import { formatWorkspaceRole } from '@/lib/workspace'
 
 type NavItem = {
   label: string
@@ -11,130 +28,235 @@ type NavItem = {
   icon: LucideIcon
 }
 
-const nav: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
-  { label: 'Jobs', icon: Briefcase, href: '/jobs' },
-  { label: 'Candidates', icon: Users, href: '/candidates' },
+const primaryNav: NavItem[] = [
+  { label: 'Overview', icon: LayoutDashboard, href: '/admin' },
+  { label: 'Jobs', icon: Briefcase, href: '/admin/jobs' },
+  { label: 'Candidates', icon: Users, href: '/admin/candidates' },
+  { label: 'Team', icon: UserPlus, href: '/admin/team' },
+  { label: 'Analytics', icon: BarChart3, href: '/admin/analytics' },
+  { label: 'Settings', icon: Settings, href: '/admin/settings' },
 ]
 
 function isActive(pathname: string, href: string) {
-  if (href === '/') return pathname === '/'
-  return pathname === href || pathname.startsWith(href + '/')
+  if (href === '/admin') return pathname === '/admin'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function getInitials(name: string) {
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+
+  if (parts.length === 0) return 'HS'
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [supabase] = useState(() => createClient())
+  const { user, workspace } = useAuth()
+
+  const fullName = getUserDisplayName(user, 'Hiring Team')
+  const email = user?.email ?? 'workspace@hiresync.ai'
+  const initials = getInitials(fullName)
+  const workspaceName = workspace?.name || 'Hiring workspace'
+  const workspaceRole = formatWorkspaceRole(workspace?.membershipRole)
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login?method=logout')
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
-      {/* Mobile topbar */}
-      <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/75 backdrop-blur-md md:hidden">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-              <Sparkles size={18} />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_36%),linear-gradient(180deg,_#f8fbff_0%,_#eef4f8_100%)] text-slate-900">
+      <aside className="fixed inset-y-0 left-0 hidden w-[288px] flex-col border-r border-white/70 bg-white/80 px-5 py-6 backdrop-blur-xl md:flex">
+        <div className="px-3">
+          <Logo />
+        </div>
+
+        <div className="mt-8 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-2xl bg-slate-900 p-2 text-white">
+              <ShieldCheck size={16} />
             </div>
-            <div className="font-black tracking-tight">
-              HireSync<span className="text-blue-600">AI</span>
+            <div>
+              <div className="text-sm font-black text-slate-900">{workspaceName}</div>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                Private hiring workspace for jobs, candidates, notes, and team coordination.
+              </p>
             </div>
-          </div>
-          <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-            Workspace
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-[280px_1fr]">
-        {/* Desktop sidebar */}
-        <aside className="hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:sticky md:top-6 md:block md:h-[calc(100vh-3rem)]">
-          <div className="flex items-center gap-2 px-2 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-              <Sparkles size={18} />
+        <nav className="mt-8 space-y-1">
+          {primaryNav.map((item) => (
+            <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+          ))}
+        </nav>
+
+        <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+            Workflow Standard
+          </div>
+          <div className="mt-3 space-y-3">
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+              Keep AI as recommendation, not final decision.
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+              Move every candidate through a visible pipeline.
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+              Capture notes and reasons before rejection.
+            </div>
+          </div>
+        </div>
+
+        <details className="group mt-auto">
+          <summary className="list-none cursor-pointer rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-lg shadow-blue-100">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-black text-slate-900">{fullName}</div>
+                <div className="truncate text-xs font-semibold text-slate-500">{email}</div>
+              </div>
+              <ChevronDown size={16} className="text-slate-400" />
             </div>
 
-            <div className="min-w-0">
-              <div className="truncate font-black tracking-tight">
-                HireSync<span className="text-blue-600">AI</span>
+            <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Workspace access
+                </div>
+                <div className="mt-1 text-sm font-black text-slate-900">{workspaceRole} session active</div>
               </div>
-              <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Recruiter workspace
+              <div className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                Live
               </div>
+            </div>
+          </summary>
+
+          <div className="mt-3 rounded-[24px] border border-white/70 bg-white/88 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+            <Link
+              href="/"
+              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+            >
+              <House size={16} className="text-slate-400" />
+              Public portal
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
+            >
+              <LogOut size={16} className="text-amber-700" />
+              Log out
+            </button>
+          </div>
+        </details>
+      </aside>
+
+      <header className="sticky top-0 z-40 border-b border-white/80 bg-white/85 backdrop-blur-xl md:hidden">
+        <div className="flex items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" />
+            <div>
+              <div className="text-sm font-black text-slate-900">{workspaceName}</div>
+              <div className="text-[11px] font-semibold text-slate-500">{workspaceRole} session active</div>
             </div>
           </div>
 
-          <div className="mt-4 space-y-1">
-            {nav.map((item) => {
-              const Icon = item.icon
-              const active = isActive(pathname, item.href)
+          <details className="group relative">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
+                {initials}
+              </div>
+              <ChevronDown size={14} className="text-slate-400" />
+            </summary>
 
-              return (
+            <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[28px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
+              <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Account</div>
+                <div className="mt-2 text-base font-black text-slate-900">{fullName}</div>
+                <div className="mt-1 break-all text-sm font-semibold text-slate-500">{email}</div>
+              </div>
+
+              <div className="mt-2 space-y-1">
                 <Link
-                  key={item.label}
-                  href={item.href}
-                  className={[
-                    'group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold transition',
-                    active
-                      ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-600/5'
-                      : 'text-slate-700 hover:bg-slate-50',
-                  ].join(' ')}
+                  href="/"
+                  className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
                 >
-                  <Icon
-                    size={16}
-                    className={[
-                      'transition',
-                      active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600',
-                    ].join(' ')}
-                  />
-                  {item.label}
+                  <House size={16} className="text-slate-400" />
+                  Public portal
                 </Link>
-              )
-            })}
-          </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
+                >
+                  <LogOut size={16} className="text-amber-700" />
+                  Log out
+                </button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </header>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4">
-            <div className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Quick flow
-            </div>
-            <div className="mt-2 text-sm font-semibold text-slate-700">
-              Create a job → add candidates → run AI analysis → review ranking.
-            </div>
-            <div className="mt-2 text-xs font-semibold text-slate-500">
-              Mobile: use bottom navigation.
-            </div>
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="min-w-0 pb-24 md:pb-0">
-          <div className="rounded-3xl border border-slate-200 bg-white/60 p-3 shadow-sm shadow-slate-900/5 backdrop-blur md:p-4">
+      <main className="md:pl-[288px]">
+        <div className="mx-auto max-w-7xl p-4 pb-24 md:p-8">
+          <div className="min-h-[calc(100vh-2rem)] rounded-[32px] border border-white/80 bg-white/72 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-8">
             {children}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
 
-      {/* Mobile bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/90 backdrop-blur-md md:hidden">
-        <div className="mx-auto flex max-w-7xl items-center justify-around px-4 py-3">
-          {nav.map((item) => {
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/80 bg-white/92 px-2 py-2 backdrop-blur-xl md:hidden">
+        <div className="grid grid-cols-6 gap-1">
+          {primaryNav.map((item) => {
             const Icon = item.icon
             const active = isActive(pathname, item.href)
 
             return (
               <Link
-                key={item.label}
+                key={item.href}
                 href={item.href}
                 className={[
-                  'flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-xs font-black transition',
-                  active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-700',
+                  'flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[10px] font-black transition',
+                  active ? 'bg-slate-900 text-white' : 'text-slate-500',
                 ].join(' ')}
               >
-                <Icon size={18} className={active ? 'text-blue-600' : 'text-slate-400'} />
-                {item.label}
+                <Icon size={16} />
+                <span className="mt-1">{item.label}</span>
               </Link>
             )
           })}
         </div>
       </nav>
     </div>
+  )
+}
+
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = item.icon
+
+  return (
+    <Link
+      href={item.href}
+      className={[
+        'group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition-all',
+        active
+          ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+      ].join(' ')}
+    >
+      <Icon
+        size={18}
+        className={active ? 'text-white' : 'text-slate-400 transition group-hover:text-slate-700'}
+      />
+      {item.label}
+    </Link>
   )
 }

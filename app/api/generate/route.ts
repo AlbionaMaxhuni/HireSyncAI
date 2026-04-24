@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-export const runtime = 'edge' // streaming works best on edge
+export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   const cookieStore = await cookies()

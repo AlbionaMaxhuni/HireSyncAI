@@ -1,233 +1,574 @@
-'use client';
-import { useEffect, useMemo, useState, Suspense } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+'use client'
+
+import { Suspense, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Mail, Lock, User, Eye, EyeOff, Sparkles,
-  ChevronRight, AlertCircle, CheckCircle2, ArrowLeft, Info
-} from 'lucide-react';
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  BriefcaseBusiness,
+  BrainCircuit,
+  CheckCircle2,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  User,
+  type LucideIcon,
+} from 'lucide-react'
+import Logo from '@/components/branding/Logo'
+import { getUserDisplayName } from '@/lib/auth'
+import { createClient } from '@/utils/supabase/client'
+
+type AuthMode = 'login' | 'signup' | 'forgot'
+
+function getInitials(name: string) {
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+
+  if (parts.length === 0) return 'HS'
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('')
+}
 
 function AuthContent() {
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
-  const [showPassword, setShowPassword] = useState(false);
+  const [supabase] = useState(() => createClient())
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [mode, setMode] = useState<AuthMode>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [checkingSession, setCheckingSession] = useState(true)
+  const [sessionUserEmail, setSessionUserEmail] = useState<string | null>(null)
+  const [sessionUserName, setSessionUserName] = useState<string | null>(null)
+  const [switchingAccount, setSwitchingAccount] = useState(false)
 
-  // NOTE: Notice = info message (not error). Error = real auth errors.
-  const [notice, setNotice] = useState('');
-  const [error, setError] = useState('');
+  const authRequired = searchParams.get('message') === 'auth_required'
+  const logoutMode = searchParams.get('method') === 'logout'
+  const requestedPath = searchParams.get('next')?.trim()
+  const nextPath =
+    requestedPath && requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+      ? requestedPath
+      : '/auth/complete'
+  const joiningWorkspace = nextPath.includes('/auth/complete?invite=')
 
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
-
-  const supabase = createClient();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const urlNotice = useMemo(() => {
-    return searchParams.get('message') === 'auth_required'
-      ? 'Please sign in to access your dashboard.'
-      : '';
-  }, [searchParams]);
+    if (logoutMode) return 'You have logged out successfully.'
+    if (authRequired) return 'Please sign in to continue to the page you requested.'
+    if (joiningWorkspace) return 'Sign in or create an account to join your team workspace.'
+    return ''
+  }, [authRequired, joiningWorkspace, logoutMode])
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 5000);
-  };
+  const headerText = useMemo(() => {
+    if (mode === 'signup') {
+      return {
+        eyebrow: 'Create access',
+        title: 'Create your HireSync account',
+        subtitle: 'Use one clean entry point for candidate applications and recruiting team access.',
+      }
+    }
+
+    if (mode === 'forgot') {
+      return {
+        eyebrow: 'Password reset',
+        title: 'Reset your password',
+        subtitle: 'We will send you a secure link so you can get back into the workspace quickly.',
+      }
+    }
+
+    return {
+      eyebrow: 'Secure access',
+      title: 'Sign in to HireSync AI',
+      subtitle: 'A simple, professional sign-in flow for the public portal and the private hiring workspace.',
+    }
+  }, [mode])
+
+  const sessionDisplayName = sessionUserName || sessionUserEmail || 'HireSync user'
+  const sessionInitials = getInitials(sessionDisplayName)
+  const showSessionCard = Boolean(sessionUserEmail) && mode === 'login'
 
   useEffect(() => {
-    const method = searchParams.get('method');
+    const run = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    // 1) From logout or reset callback hash
-    if (method === 'logout' || window.location.hash.includes('access_token')) {
-      window.history.replaceState({}, '', '/login');
-      return;
+      setSessionUserEmail(user?.email ?? null)
+      setSessionUserName(user ? getUserDisplayName(user, user.email ?? 'User') : null)
+      setCheckingSession(false)
     }
 
-    if (searchParams.get('message') === 'auth_required') {
-      const timer = setTimeout(() => {
-        window.history.replaceState({}, '', '/login');
-      }, 500);
+    run()
+  }, [supabase])
 
-      return () => clearTimeout(timer);
+  useEffect(() => {
+    if (logoutMode) {
+      window.history.replaceState({}, '', '/login')
     }
-  }, [searchParams]);
+  }, [logoutMode])
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setNotice('');
+  const handleReset = async (event: FormEvent) => {
+    event.preventDefault()
+
+    setLoading(true)
+    setError('')
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
-    });
+    })
 
-    if (error) setError(error.message);
-    else {
-      showToast('Reset link sent! Check your inbox.', 'success');
-      setAuthMode('login');
+    if (error) {
+      setError(error.message)
+    } else {
+      setNotice('Password reset link sent. Check your inbox.')
+      setMode('login')
     }
-    setLoading(false);
-  };
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setNotice('');
-    setLoading(true);
+    setLoading(false)
+  }
 
-    if (authMode === 'signup') {
+  const handleAuth = async (event: FormEvent) => {
+    event.preventDefault()
+    setLoading(true)
+    setError('')
+    setNotice('')
+
+    if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } }
-      });
+        options: {
+          data: { full_name: name.trim() },
+        },
+      })
 
-      if (error) setError(error.message);
-      else {
-        showToast('Check your email!', 'success');
-        setAuthMode('login');
+      if (error) {
+        setError(error.message)
+      } else {
+        setNotice('Account created. Please verify your email before signing in.')
+        setMode('login')
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
-      else router.push('/');
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push(nextPath)
+      }
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
+
+  const signOutExistingSession = async () => {
+    setSwitchingAccount(true)
+    setError('')
+
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setSessionUserEmail(null)
+      setSessionUserName(null)
+      setNotice('Logged out. You can continue with another account.')
+    }
+
+    setSwitchingAccount(false)
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4 font-sans text-slate-900 relative">
-      {toast && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-5 duration-300">
-          <div className="px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border bg-white border-blue-100 text-blue-700 font-bold text-sm">
-            <CheckCircle2 size={18} /> {toast.msg}
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.18),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(180,83,9,0.08),_transparent_34%),linear-gradient(180deg,_#f8fbff_0%,_#edf3f8_100%)] px-4 py-6 text-slate-900">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden rounded-[40px] border border-white/80 bg-white/74 shadow-[0_32px_120px_rgba(15,23,42,0.12)] backdrop-blur-xl xl:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative overflow-hidden bg-[linear-gradient(150deg,_#07111f_0%,_#10233e_52%,_#0f766e_100%)] px-6 py-8 text-white md:px-10 md:py-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.08),_transparent_32%)]" />
 
-      <div className="max-w-md w-full bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 p-8 md:p-12 border border-white relative overflow-hidden transition-all duration-300">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+          <div className="relative z-10 flex h-full flex-col">
+            <Logo theme="dark" />
 
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl mb-6">
-            <Sparkles size={32} />
-          </div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-2">
-            {authMode === 'signup' ? 'Create Account' : authMode === 'forgot' ? 'Reset Password' : 'Welcome Back'}
-          </h2>
-        </div>
-
-        <form onSubmit={authMode === 'forgot' ? handleResetPassword : handleAuth} className="space-y-5">
-          {/* Notice (info) */}
-          {(notice || urlNotice) && (
-            <div className="p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-[11px] font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-              <Info size={14} className="shrink-0 text-slate-500" /> {notice || urlNotice}
+            <div className="mt-12 max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">
+                <Sparkles size={12} />
+                Cleaner product entry
+              </div>
+              <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight md:text-5xl">
+                A cleaner front door for the hiring workspace.
+              </h1>
+              <p className="mt-4 max-w-lg text-sm font-semibold leading-relaxed text-slate-200 md:text-base">
+                Candidates can review roles calmly, and the team enters the private workspace only when needed. The
+                result feels simpler, more real, and more professional.
+              </p>
             </div>
-          )}
 
-          {/* Error (red) */}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-[11px] font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-              <AlertCircle size={14} className="shrink-0" /> {error}
-            </div>
-          )}
-
-          {authMode === 'signup' && (
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-[20px] outline-none focus:bg-white focus:border-blue-500 text-sm font-semibold transition-all"
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              <InfoTile
+                icon={BriefcaseBusiness}
+                title="Public roles"
+                text="Jobs stay visible before login so visitors understand the opportunity first."
+              />
+              <InfoTile
+                icon={BrainCircuit}
+                title="Focused review"
+                text="Recruiters keep candidates, notes, and AI support in one disciplined workspace."
+              />
+              <InfoTile
+                icon={ShieldCheck}
+                title="Secure access"
+                text="Authentication starts only when applying or entering the internal admin area."
               />
             </div>
-          )}
 
-          <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-[20px] outline-none focus:bg-white focus:border-blue-500 text-sm font-semibold transition-all"
-            />
+            <div className="mt-8 rounded-[28px] border border-white/12 bg-white/10 p-5">
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-100">
+                Better account behavior
+              </div>
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-200">
+                Logging out should live under account actions, not be the loudest button in the main navigation. This
+                keeps the experience calmer and more credible.
+              </p>
+            </div>
           </div>
+        </section>
 
-          {authMode !== 'forgot' && (
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-[20px] outline-none focus:bg-white focus:border-blue-500 text-sm font-semibold transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+        <section className="flex items-center justify-center px-5 py-8 md:px-10">
+          <div className="w-full max-w-md">
+            <div className="mb-6 xl:hidden">
+              <Logo />
             </div>
-          )}
 
-          {authMode === 'login' && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => { setAuthMode('forgot'); setError(''); setNotice(''); }}
-                className="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors"
-              >
-                Forgot Password?
-              </button>
+            <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] md:p-8">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    {headerText.eyebrow}
+                  </div>
+                  <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900">{headerText.title}</h2>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+                    {headerText.subtitle}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-950 p-3 text-white">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+
+              {mode !== 'forgot' && !showSessionCard && (
+                <div className="mt-6 grid grid-cols-2 rounded-[20px] bg-slate-100 p-1">
+                  <ModeButton
+                    active={mode === 'login'}
+                    onClick={() => {
+                      setMode('login')
+                      setError('')
+                      setNotice('')
+                    }}
+                  >
+                    Sign in
+                  </ModeButton>
+                  <ModeButton
+                    active={mode === 'signup'}
+                    onClick={() => {
+                      setMode('signup')
+                      setError('')
+                      setNotice('')
+                    }}
+                  >
+                    Create account
+                  </ModeButton>
+                </div>
+              )}
+
+              <div className="mt-6 space-y-4">
+                {(notice || urlNotice) && (
+                  <Banner tone="info">
+                    <CheckCircle2 size={14} />
+                    {notice || urlNotice}
+                  </Banner>
+                )}
+
+                {error && (
+                  <Banner tone="error">
+                    <AlertCircle size={14} />
+                    {error}
+                  </Banner>
+                )}
+
+                {checkingSession ? (
+                  <div className="flex items-center justify-center gap-2 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-sm font-semibold text-slate-500">
+                    <Loader2 size={16} className="animate-spin" />
+                    Checking your current session...
+                  </div>
+                ) : showSessionCard ? (
+                  <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-lg shadow-blue-100">
+                        {sessionInitials}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                          Session detected
+                        </div>
+                        <div className="truncate text-xl font-black text-slate-900">{sessionDisplayName}</div>
+                        <div className="truncate text-sm font-semibold text-slate-500">{sessionUserEmail}</div>
+                      </div>
+                    </div>
+
+                    <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-600">
+                      You are already logged in. Continue with this account or log out if you want to switch to
+                      another one.
+                    </p>
+
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => router.push(nextPath)}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+                      >
+                        Continue
+                        <ArrowRight size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={signOutExistingSession}
+                        disabled={switchingAccount}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {switchingAccount ? <Loader2 size={16} className="animate-spin" /> : <ArrowLeft size={16} />}
+                        Log out and switch
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={mode === 'forgot' ? handleReset : handleAuth} className="space-y-4">
+                    {mode === 'signup' && (
+                      <Field icon={User}>
+                        <input
+                          value={name}
+                          onChange={(event) => setName(event.target.value)}
+                          placeholder="Full name"
+                          autoComplete="name"
+                          className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+                          required
+                        />
+                      </Field>
+                    )}
+
+                    <Field icon={Mail}>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="Work email"
+                        autoComplete="email"
+                        className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+                        required
+                      />
+                    </Field>
+
+                    {mode !== 'forgot' && (
+                      <Field icon={Lock}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder="Password"
+                          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                          className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+                          minLength={8}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((value) => !value)}
+                          className="text-slate-400 transition hover:text-slate-700"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </Field>
+                    )}
+
+                    {mode === 'login' && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode('forgot')
+                            setError('')
+                          }}
+                          className="text-xs font-black uppercase tracking-[0.16em] text-blue-700 transition hover:text-slate-900"
+                        >
+                          Forgot password
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {mode === 'forgot'
+                        ? loading
+                          ? 'Sending reset link...'
+                          : 'Send reset link'
+                        : loading
+                          ? 'Processing...'
+                          : mode === 'signup'
+                            ? 'Create account'
+                            : 'Sign in'}
+                      {!loading && <ChevronRight size={18} />}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-white p-2 text-slate-900 shadow-sm">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-slate-900">Simple entry flow</div>
+                    <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-600">
+                      Open roles remain public. Sign in is only for applying, tracking applications, or entering the
+                      hiring workspace.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-slate-100 pt-6 text-center">
+                {showSessionCard ? (
+                  <div className="text-sm font-semibold text-slate-500">
+                    Use the actions above to continue or switch account.
+                  </div>
+                ) : mode === 'forgot' ? (
+                  <button
+                    onClick={() => {
+                      setMode('login')
+                      setError('')
+                    }}
+                    className="inline-flex items-center gap-2 text-sm font-black text-slate-500 transition hover:text-slate-900"
+                  >
+                    <ArrowLeft size={16} />
+                    Back to sign in
+                  </button>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-500">
+                    Secure authentication for both hiring teams and candidates.
+                  </p>
+                )}
+              </div>
             </div>
-          )}
-
-          <button
-            disabled={loading}
-            className="group w-full bg-slate-900 text-white py-4 rounded-[20px] font-bold text-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            <span>{loading ? 'Processing...' : authMode === 'signup' ? 'Sign Up' : authMode === 'forgot' ? 'Send Link' : 'Sign In'}</span>
-            {!loading && <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />}
-          </button>
-        </form>
-
-        <div className="mt-10 pt-8 border-t border-slate-100 text-center">
-          {authMode === 'forgot' ? (
-            <button
-              onClick={() => { setAuthMode('login'); setError(''); setNotice(''); }}
-              className="flex items-center justify-center gap-2 w-full text-slate-400 hover:text-blue-600 text-sm font-bold transition-colors"
-            >
-              <ArrowLeft size={16} /> Back to Sign In
-            </button>
-          ) : (
-            <button
-              onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); setNotice(''); }}
-              className="text-blue-600 text-sm font-black hover:text-blue-700 underline underline-offset-4 transition-colors"
-            >
-              {authMode === 'login' ? "New here? Create Account" : "Already have an account? Sign In"}
-            </button>
-          )}
-        </div>
+          </div>
+        </section>
       </div>
     </div>
-  );
+  )
+}
+
+function ModeButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean
+  children: ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'rounded-2xl px-4 py-3 text-sm font-black transition',
+        active ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Field({
+  children,
+  icon: Icon,
+}: {
+  children: ReactNode
+  icon: LucideIcon
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition focus-within:border-slate-900 focus-within:bg-white">
+      <Icon size={18} className="shrink-0 text-slate-400" />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  )
+}
+
+function Banner({
+  tone,
+  children,
+}: {
+  tone: 'info' | 'error'
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={[
+        'flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold',
+        tone === 'info'
+          ? 'border border-emerald-100 bg-emerald-50 text-emerald-800'
+          : 'border border-rose-100 bg-rose-50 text-rose-700',
+      ].join(' ')}
+    >
+      {children}
+    </div>
+  )
+}
+
+function InfoTile({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: LucideIcon
+  title: string
+  text: string
+}) {
+  return (
+    <div className="rounded-[26px] border border-white/12 bg-white/10 p-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/12 text-white">
+        <Icon size={18} />
+      </div>
+      <div className="mt-4 text-lg font-black text-white">{title}</div>
+      <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">{text}</p>
+    </div>
+  )
 }
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500">
+          Loading authentication...
+        </div>
+      }
+    >
       <AuthContent />
     </Suspense>
-  );
+  )
 }

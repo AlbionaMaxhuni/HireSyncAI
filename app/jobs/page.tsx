@@ -1,281 +1,120 @@
-'use client'
-
-import { useEffect, useMemo, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
-import AppShell from '@/components/layout/AppShell'
+import Link from 'next/link'
+import { ArrowRight, BriefcaseBusiness, Clock3, MapPin } from 'lucide-react'
 import Card from '@/components/ui/Card'
-import Toast, { type ToastState } from '@/components/ui/Toast'
-import Skeleton from '@/components/ui/Skeleton'
-import { Plus, ArrowRight, Briefcase, Trash2 } from 'lucide-react'
+import PortalShell from '@/components/layout/PortalShell'
+import { createServerSupabaseAdminClient } from '@/lib/server-auth'
+import { isJobPublic, type JobRecord } from '@/lib/hiring'
 
-type Job = {
+type PublicWorkspace = {
   id: string
-  user_id: string
-  title: string
-  description: string
-  created_at: string
+  name: string | null
 }
 
-export default function JobsPage() {
-  const supabase = createClient()
-  const router = useRouter()
+async function getJobs() {
+  const supabase = createServerSupabaseAdminClient()
+  const { data } = await supabase.from('jobs').select('*').order('created_at', { ascending: false })
+  return ((data ?? []) as JobRecord[]).filter(isJobPublic)
+}
 
-  const [toast, setToast] = useState<ToastState>({ open: false })
-  const showToast = (type: 'success' | 'error', message: string) =>
-    setToast({ open: true, type, message })
+async function getWorkspaces(workspaceIds: string[]) {
+  if (workspaceIds.length === 0) return {}
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [jobs, setJobs] = useState<Job[]>([])
+  const supabase = createServerSupabaseAdminClient()
+  const { data } = await supabase.from('workspaces').select('id,name').in('id', workspaceIds)
 
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [creating, setCreating] = useState(false)
+  return ((data ?? []) as PublicWorkspace[]).reduce<Record<string, PublicWorkspace>>((accumulator, workspace) => {
+    accumulator[workspace.id] = workspace
+    return accumulator
+  }, {})
+}
 
-  const titleTrim = title.trim()
-  const descTrim = description.trim()
-
-  const titleOk = titleTrim.length >= 3
-  const descOk = descTrim.length >= 5
-
-  const canCreate = useMemo(() => titleOk && descOk, [titleOk, descOk])
-
-  const disabledReason = useMemo(() => {
-    if (!titleOk && !descOk) return 'Title is too short and description is too short.'
-    if (!titleOk) return 'Title is too short (min 3 characters).'
-    if (!descOk) return 'Description is too short (min 5 characters).'
-    return ''
-  }, [titleOk, descOk])
-
-  useEffect(() => {
-    const run = async () => {
-      const { data } = await supabase.auth.getUser()
-      if (!data.user) {
-        router.push('/login?message=auth_required')
-        return
-      }
-      setUserId(data.user.id)
-    }
-    run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!userId) return
-
-    const load = async () => {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error(error)
-        showToast('error', 'Failed to load jobs.')
-        setLoading(false)
-        return
-      }
-
-      setJobs((data ?? []) as Job[])
-      setLoading(false)
-    }
-
-    load()
-  }, [userId, supabase])
-
-  const createJob = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!userId || !canCreate) return
-
-    setCreating(true)
-    try {
-      const payload = {
-        user_id: userId,
-        title: titleTrim,
-        description: descTrim,
-      }
-
-      const { data, error } = await supabase.from('jobs').insert([payload]).select('*').single()
-      if (error) throw error
-
-      const job = data as Job
-      setJobs((prev) => [job, ...prev])
-      setTitle('')
-      setDescription('')
-      showToast('success', 'Job created.')
-    } catch (err) {
-      console.error(err)
-      showToast('error', 'Could not create job.')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const deleteJob = async (jobId: string) => {
-    if (!userId) return
-    const ok = confirm('Delete this job? Candidates under it will also be deleted.')
-    if (!ok) return
-
-    const { error } = await supabase.from('jobs').delete().eq('user_id', userId).eq('id', jobId)
-    if (error) {
-      console.error(error)
-      showToast('error', 'Could not delete job.')
-      return
-    }
-
-    setJobs((prev) => prev.filter((j) => j.id !== jobId))
-    showToast('success', 'Job deleted.')
-  }
+export default async function JobsPage() {
+  const jobs = await getJobs()
+  const workspacesById = await getWorkspaces(
+    Array.from(new Set(jobs.map((job) => job.workspace_id).filter((workspaceId): workspaceId is string => Boolean(workspaceId))))
+  )
 
   return (
-    <AppShell>
-      <Toast toast={toast} onClose={() => setToast({ open: false })} />
-
-      <div className="mb-4">
-        <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-          Hiring pipeline
+    <PortalShell>
+      <section className="rounded-[40px] border border-white/70 bg-[linear-gradient(135deg,_#fff9f0_0%,_#fff1da_42%,_#f5eadf_100%)] px-6 py-8 shadow-[0_20px_60px_rgba(15,23,42,0.05)] md:px-8 md:py-10">
+        <div className="max-w-4xl">
+          <div className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">Open roles</div>
+          <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+            Browse roles without friction.
+          </h1>
+          <p className="mt-4 max-w-2xl text-base font-semibold leading-relaxed text-slate-600">
+            Candidates can review every opening before signing in. When they choose a role, the application flow is
+            fast, guided, and clean.
+          </p>
         </div>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Jobs</h1>
-        <p className="mt-1 text-sm font-semibold text-slate-500">
-          Create a job, then add candidates (resume text) and generate AI insights.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
-        {/* Jobs list */}
-        <Card className="p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-sm font-black text-slate-900">Your jobs</div>
-            <div className="text-xs font-semibold text-slate-400">{jobs.length} total</div>
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card className="border-0 bg-white/80 p-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Roles</div>
+            <div className="mt-2 text-3xl font-black tracking-tight text-slate-950">{jobs.length}</div>
+          </Card>
+          <Card className="border-0 bg-white/80 p-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Experience</div>
+            <div className="mt-2 text-lg font-black tracking-tight text-slate-950">Public-first candidate journey</div>
+          </Card>
+          <Card className="border-0 bg-white/80 p-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Apply flow</div>
+            <div className="mt-2 text-lg font-black tracking-tight text-slate-950">Sign in only when ready to apply</div>
+          </Card>
+        </div>
+      </section>
+
+      <section className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {jobs.length === 0 ? (
+          <div className="rounded-[32px] border border-dashed border-slate-200 bg-white/75 p-10 text-sm font-semibold text-slate-500 xl:col-span-2">
+            No roles are available right now. Check back soon.
           </div>
-
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-              No jobs yet. Create your first one on the right.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {jobs.map((j) => (
-                <div
-                  key={j.id}
-                  className="group rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      onClick={() => router.push(`/jobs/${j.id}`)}
-                      className="min-w-0 flex-1 text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Briefcase size={16} className="text-slate-400" />
-                        <div className="truncate text-sm font-black text-slate-900">{j.title}</div>
-                      </div>
-                      <div className="mt-2 line-clamp-2 text-sm font-semibold text-slate-600">
-                        {j.description}
-                      </div>
-                      <div className="mt-2 text-[11px] font-semibold text-slate-400">
-                        {new Date(j.created_at).toLocaleDateString()}
-                      </div>
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => router.push(`/jobs/${j.id}`)}
-                        className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-blue-600"
-                        title="Open"
-                        aria-label="Open"
-                      >
-                        <ArrowRight size={16} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          deleteJob(j.id)
-                        }}
-                        className="rounded-xl p-2 text-slate-300 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                        title="Delete"
-                        aria-label="Delete job"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Create job */}
-        <Card className="p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-sm font-black text-slate-900">Create job</div>
-            <div className="text-[11px] font-semibold text-slate-400">MVP</div>
-          </div>
-
-          <form onSubmit={createJob} className="space-y-3">
-            <div>
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Title
-              </label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Senior Frontend Engineer"
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500"
-              />
-              <div className="mt-1 text-[11px] font-semibold text-slate-500">
-                {titleOk ? 'OK' : 'Min 3 characters.'}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Job description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Paste the job description here..."
-                rows={10}
-                className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500"
-              />
-              <div className="mt-1 text-[11px] font-semibold text-slate-500">
-                {descOk ? 'OK' : 'Min 5 characters.'}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={!canCreate || creating}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-600 disabled:opacity-30"
-              title={!canCreate ? disabledReason : 'Create job'}
+        ) : (
+          jobs.map((job) => (
+            <Link
+              key={job.id}
+              href={`/jobs/${job.id}`}
+              className="group rounded-[34px] border border-white/80 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_24px_70px_rgba(15,23,42,0.08)]"
             >
-              <Plus size={16} />
-              {creating ? 'Creating…' : 'Create job'}
-            </button>
-
-            {!canCreate && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-600">
-                {disabledReason}
+              <div className="flex items-start justify-between gap-4">
+                <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+                  <BriefcaseBusiness size={18} />
+                </div>
+                <div className="inline-flex items-center gap-2 text-sm font-black text-slate-950">
+                  Open role
+                  <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
+                </div>
               </div>
-            )}
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-600">
-              Next: open the job → add candidates → analyze with streaming AI.
-            </div>
-          </form>
-        </Card>
-      </div>
-    </AppShell>
+              <div className="mt-5 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                {workspacesById[job.workspace_id ?? '']?.name || 'Hiring team'}
+              </div>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{job.title}</h2>
+              <p className="mt-3 line-clamp-4 text-sm font-semibold leading-relaxed text-slate-600">
+                {job.description}
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {job.location && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">
+                    <MapPin size={12} />
+                    {job.location}
+                  </span>
+                )}
+                {job.employment_type && (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">
+                    {job.employment_type}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">
+                  <Clock3 size={12} />
+                  {new Date(job.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </Link>
+          ))
+        )}
+      </section>
+    </PortalShell>
   )
 }
