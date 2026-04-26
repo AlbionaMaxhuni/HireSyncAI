@@ -185,6 +185,26 @@ export default function AdminSettingsPage() {
   }
 
   const userRole = role ?? 'admin'
+  const setupCards = [
+    {
+      title: 'Owner name',
+      ready: fullName.trim().length > 0,
+      description: fullName.trim().length > 0 ? fullName.trim() : 'Add the person behind this workspace.',
+    },
+    {
+      title: 'Company name',
+      ready: companyName.trim().length > 0,
+      description: companyName.trim().length > 0 ? companyName.trim() : 'Set the company name candidates will see.',
+    },
+    {
+      title: 'Public context',
+      ready: companyWebsite.trim().length > 0 || companyTagline.trim().length > 0,
+      description:
+        companyWebsite.trim().length > 0 || companyTagline.trim().length > 0
+          ? companyWebsite.trim() || companyTagline.trim()
+          : 'Add a website or tagline so the public portal feels credible.',
+    },
+  ]
 
   return (
     <AppShell>
@@ -200,9 +220,24 @@ export default function AdminSettingsPage() {
             <ArrowUpRight size={16} />
           </Link>
         }
-      />
+        />
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.9fr]">
+      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">First-time setup</div>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {setupCards.map((card) => (
+            <div key={card.title} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-black text-slate-950">{card.title}</div>
+                <AdminPill label={card.ready ? 'Ready' : 'Needed'} tone={card.ready ? 'success' : 'warning'} />
+              </div>
+              <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{card.description}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.9fr]">
         <AdminSectionCard
           eyebrow="Account"
           title="Profile and company details"
@@ -216,7 +251,7 @@ export default function AdminSettingsPage() {
             </div>
           ) : (
             <form onSubmit={saveProfile} className="space-y-5">
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -244,20 +279,20 @@ export default function AdminSettingsPage() {
 
               <div>
                 <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Email</label>
-                <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                <div className="mt-2 rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
                   {user?.email || 'No email'}
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-white p-3 text-slate-900 shadow-sm">
+                  <div className="rounded-[10px] bg-white p-3 text-slate-900 shadow-sm">
                     <BriefcaseBusiness size={18} />
                   </div>
                   <div>
                     <div className="text-sm font-black text-slate-950">Company profile</div>
                     <div className="mt-1 text-sm font-semibold leading-relaxed text-slate-500">
-                      These fields help the public job pages feel like a real company career space instead of a generic portal.
+                      These fields make the public jobs page look like a real company page instead of an empty demo.
                     </div>
                   </div>
                 </div>
@@ -319,9 +354,9 @@ export default function AdminSettingsPage() {
             title="Password reset"
             description="Use the secure reset flow when you want to rotate or recover the password for this account."
           >
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
               <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-white p-3 text-slate-900 shadow-sm">
+                <div className="rounded-[10px] bg-white p-3 text-slate-900 shadow-sm">
                   <KeyRound size={18} />
                 </div>
                 <div>
@@ -382,9 +417,9 @@ function StatusRow({
   value: string
 }) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start gap-3">
-        <div className="rounded-2xl bg-white p-2.5 text-slate-900 shadow-sm">
+        <div className="rounded-[10px] bg-white p-2.5 text-slate-900 shadow-sm">
           <Icon size={16} />
         </div>
         <div>

@@ -14,6 +14,8 @@ export type CandidateRecord = {
   user_id: string
   job_id: string
   workspace_id?: string | null
+  job_title_snapshot?: string | null
+  company_name_snapshot?: string | null
   full_name: string | null
   email: string | null
   resume_text: string | null

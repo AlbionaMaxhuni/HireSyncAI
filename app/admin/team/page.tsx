@@ -143,6 +143,11 @@ export default function AdminTeamPage() {
   }, [authLoading, supabase, workspace])
 
   const canCreateInvite = inviteEmail.trim().length > 4 && Boolean(workspace?.id) && Boolean(user?.id)
+  const teamSteps = [
+    '1. Create an invite for the teammate email.',
+    '2. They sign in with that same email address.',
+    '3. Once accepted, they appear here as an active workspace member.',
+  ]
 
   const inviteLinkBuilder = useMemo(
     () => (inviteCode: string) => {
@@ -335,7 +340,18 @@ export default function AdminTeamPage() {
         )}
       </AdminStatsGrid>
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How team access works</div>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {teamSteps.map((step) => (
+            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+              {step}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <AdminSectionCard
           eyebrow="Invite"
           title="Add a teammate"
@@ -351,7 +367,7 @@ export default function AdminTeamPage() {
             <form onSubmit={createInvite} className="space-y-4">
               <div>
                 <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Workspace</label>
-                <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                <div className="mt-2 rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
                   {workspace?.name || 'Workspace not available yet'}
                 </div>
               </div>
@@ -410,7 +426,7 @@ export default function AdminTeamPage() {
               members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-5 md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-4 rounded-[12px] border border-slate-200 bg-white p-5 md:flex-row md:items-center md:justify-between"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -441,7 +457,7 @@ export default function AdminTeamPage() {
         </AdminSectionCard>
       </section>
 
-      <section className="mt-6">
+      <section className="mt-5">
         <AdminSectionCard
           eyebrow="Pending"
           title="Open invite links"
@@ -469,7 +485,7 @@ export default function AdminTeamPage() {
                 const inviteMailto = buildMailtoHref(invite.email, inviteDraft.subject, inviteDraft.body)
 
                 return (
-                  <div key={invite.id} className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                  <div key={invite.id} className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -487,7 +503,7 @@ export default function AdminTeamPage() {
                         {invite.last_send_error ? (
                           <div className="mt-2 text-xs font-semibold text-rose-700">{invite.last_send_error}</div>
                         ) : null}
-                        <div className="mt-4 break-all rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
+                        <div className="mt-4 break-all rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
                           {inviteLink}
                         </div>
                       </div>

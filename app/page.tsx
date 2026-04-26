@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, CheckCircle2, Orbit, Sparkles, UserRoundCheck } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import PortalShell from '@/components/layout/PortalShell'
-import { createServerSupabaseAdminClient, getOptionalServerUser, getServerUserRole } from '@/lib/server-auth'
+import { createServerSupabaseUserClient, getOptionalServerUser, getServerUserRole } from '@/lib/server-auth'
 import { isJobPublic, type JobRecord } from '@/lib/hiring'
 
 type PublicWorkspace = {
@@ -11,15 +11,21 @@ type PublicWorkspace = {
 }
 
 async function getFeaturedJobs() {
-  const supabase = createServerSupabaseAdminClient()
-  const { data } = await supabase.from('jobs').select('*').order('created_at', { ascending: false }).limit(3)
-  return ((data ?? []) as JobRecord[]).filter(isJobPublic).slice(0, 3)
+  const supabase = await createServerSupabaseUserClient()
+  const { data } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(3)
+
+  return ((data ?? []) as JobRecord[]).filter(isJobPublic)
 }
 
 async function getWorkspaces(workspaceIds: string[]) {
   if (workspaceIds.length === 0) return {}
 
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseUserClient()
   const { data } = await supabase.from('workspaces').select('id,name').in('id', workspaceIds)
 
   return ((data ?? []) as PublicWorkspace[]).reduce<Record<string, PublicWorkspace>>((accumulator, workspace) => {
@@ -51,64 +57,83 @@ export default async function LandingPage() {
           }
         : {
             href: '/login?next=%2Fauth%2Fcomplete',
-            label: 'Hiring team sign in',
+            label: 'Sign in',
           }
+
+  const journeyCards = [
+    {
+      eyebrow: 'Candidate path',
+      title: 'Browse first',
+      body: 'Anyone can read roles before creating an account or sharing personal details.',
+    },
+    {
+      eyebrow: 'Application step',
+      title: 'Apply only when ready',
+      body: 'Sign in, upload a CV, and send a simple application without extra friction.',
+    },
+    {
+      eyebrow: 'After applying',
+      title: 'Track your status',
+      body: 'Candidates can come back and see whether the application is applied, in review, or moving forward.',
+    },
+  ]
+
+  const adminCards = [
+    {
+      title: 'For candidates',
+      body: 'Read the role, sign in only when needed, then apply and track progress.',
+    },
+    {
+      title: 'For hiring teams',
+      body: 'Create roles, review candidates, and keep the pipeline in one private workspace.',
+    },
+  ]
 
   return (
     <PortalShell>
-      <section className="overflow-hidden rounded-[40px] border border-white/70 bg-[linear-gradient(135deg,_#111827_0%,_#1f2937_38%,_#b45309_100%)] px-6 py-8 text-white shadow-[0_30px_120px_rgba(15,23,42,0.16)] md:px-10 md:py-12">
-        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="overflow-hidden rounded-[14px] border border-white/70 bg-[linear-gradient(135deg,_#111827_0%,_#1f2937_38%,_#b45309_100%)] px-5 py-7 text-white shadow-[0_30px_120px_rgba(15,23,42,0.16)] md:px-7 md:py-8">
+        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] text-amber-100">
+            <div className="inline-flex items-center gap-2 rounded-[999px] border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] text-amber-100">
               <Sparkles size={12} />
-              Candidate-first hiring
+              Simple hiring flow
             </div>
-            <h1 className="mt-6 max-w-4xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
-              A hiring app that feels polished outside and disciplined inside.
+            <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight md:text-5xl">
+              Browse roles, apply clearly, and track your status.
             </h1>
-            <p className="mt-5 max-w-2xl text-base font-semibold leading-relaxed text-slate-200">
-              Candidates browse jobs without friction, apply in minutes, and your team manages the full pipeline in a
-              focused admin workspace.
+            <p className="mt-4 max-w-2xl text-sm font-semibold leading-relaxed text-slate-200 md:text-base">
+              HireSync keeps the public side easy for candidates and the private side focused for the hiring team.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/jobs"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-slate-100"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-slate-100"
               >
                 Explore open roles
                 <ArrowRight size={16} />
               </Link>
               <Link
                 href={secondaryAction.href}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:bg-white/15"
               >
                 {secondaryAction.label}
               </Link>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[32px] border border-white/12 bg-white/10 p-5">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-100">Public experience</div>
-              <div className="mt-3 text-2xl font-black">Browse first, sign in later.</div>
+          <div className="space-y-4">
+            {adminCards.map((card) => (
+              <div key={card.title} className="rounded-[12px] border border-white/12 bg-white/10 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-100">{card.title}</div>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-200">{card.body}</p>
+              </div>
+            ))}
+            <div className="rounded-[12px] border border-white/12 bg-white/10 p-4">
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-100">Best starting point</div>
+              <div className="mt-3 text-xl font-black">Open roles first.</div>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">
-                Visitors can review roles before creating an account, then authenticate only when they are ready to
-                apply.
-              </p>
-            </div>
-            <div className="rounded-[32px] border border-white/12 bg-white/10 p-5">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-100">Admin clarity</div>
-              <div className="mt-3 text-2xl font-black">One clean workspace.</div>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">
-                Jobs, candidates, AI review, notes, and analytics stay inside a private operational layer.
-              </p>
-            </div>
-            <div className="rounded-[32px] border border-white/12 bg-white/10 p-5 sm:col-span-2">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-100">Design principle</div>
-              <div className="mt-3 text-2xl font-black">Strong visuals without making the product harder to use.</div>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">
-                Every screen is meant to feel premium, but the actions stay obvious: browse, apply, review, decide.
+                If you are a candidate, start with the jobs page. If you are the hiring team, start with the admin workspace.
               </p>
             </div>
           </div>
@@ -116,44 +141,25 @@ export default async function LandingPage() {
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="border-0 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
+        {journeyCards.map((card) => (
+        <Card key={card.title} className="border-0 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
-              <Orbit size={18} />
+            <div className="rounded-[10px] bg-amber-100 p-3 text-amber-700">
+              {card.title === 'Browse first' ? <Orbit size={18} /> : card.title === 'Apply only when ready' ? <UserRoundCheck size={18} /> : <CheckCircle2 size={18} />}
             </div>
-            <div className="text-xl font-black text-slate-950">Open roles stay public</div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{card.eyebrow}</div>
+              <div className="mt-2 text-xl font-black text-slate-950">{card.title}</div>
+            </div>
           </div>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-            More professional and better for conversion than forcing login before candidates even understand the role.
+            {card.body}
           </p>
         </Card>
-
-        <Card className="border-0 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-950 p-3 text-white">
-              <UserRoundCheck size={18} />
-            </div>
-            <div className="text-xl font-black text-slate-950">Apply with guidance</div>
-          </div>
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-            Candidates get one clear action path: review the role, upload their CV, and track application status.
-          </p>
-        </Card>
-
-        <Card className="border-0 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-              <CheckCircle2 size={18} />
-            </div>
-            <div className="text-xl font-black text-slate-950">Internal review stays focused</div>
-          </div>
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-            Admin users review candidates, move stages, and use AI outputs as decision support instead of noise.
-          </p>
-        </Card>
+        ))}
       </section>
 
-      <section className="mt-6 rounded-[40px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-8">
+      <section className="mt-6 rounded-[14px] border border-white/70 bg-white/80 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Featured roles</div>
@@ -161,7 +167,7 @@ export default async function LandingPage() {
           </div>
           <Link
             href="/jobs"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             View all roles
             <ArrowRight size={16} />
@@ -170,7 +176,7 @@ export default async function LandingPage() {
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
           {featuredJobs.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 p-8 text-sm font-semibold text-slate-500 lg:col-span-3">
+            <div className="rounded-[12px] border border-dashed border-slate-200 bg-slate-50 p-7 text-sm font-semibold text-slate-500 lg:col-span-3">
               No jobs are published in the workspace yet.
             </div>
           ) : (
@@ -178,7 +184,7 @@ export default async function LandingPage() {
               <Link
                 key={job.id}
                 href={`/jobs/${job.id}`}
-                className="rounded-[32px] border border-slate-200 bg-[#fffdf9] p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+                className="rounded-[12px] border border-slate-200 bg-[#fffdf9] p-4 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
               >
                 <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">
                   Open role
@@ -186,7 +192,7 @@ export default async function LandingPage() {
                 <div className="mt-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                   {workspacesById[job.workspace_id ?? '']?.name || 'Hiring team'}
                 </div>
-                <h3 className="mt-3 text-2xl font-black tracking-tight text-slate-950">{job.title}</h3>
+                <h3 className="mt-3 text-xl font-black tracking-tight text-slate-950">{job.title}</h3>
                 <p className="mt-3 line-clamp-4 text-sm font-semibold leading-relaxed text-slate-600">
                   {job.description}
                 </p>

@@ -147,6 +147,21 @@ export default function AdminCandidatesPage() {
   const hasActiveFilters =
     search.trim().length > 0 || jobFilter !== 'all' || stageFilter !== 'all' || scoreFilter !== 'all'
 
+  const workflowCards = [
+    {
+      step: '1. Filter the list',
+      description: 'Use search, job, stage, or score to narrow the pipeline fast.',
+    },
+    {
+      step: '2. Open a profile',
+      description: 'Read the AI summary, skills, red flags, and resume in one place.',
+    },
+    {
+      step: '3. Move the candidate',
+      description: 'Decide the next stage and keep the pipeline updated after each review.',
+    },
+  ]
+
   const resetFilters = () => {
     setSearch('')
     setJobFilter('all')
@@ -161,16 +176,11 @@ export default function AdminCandidatesPage() {
       <AdminPageHeader
         eyebrow="Candidates"
         title="Candidate pipeline"
-        description="This page now focuses on filtering fast, spotting stage distribution, and opening the right profile with less visual noise."
+        description="This page should be straightforward: filter the pipeline, open a profile, then move the right people forward."
         actions={
-          <>
-            <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
-              Jobs
-            </Link>
-            <Link href="/admin/analytics" className={adminSecondaryButtonClassName}>
-              Analytics
-            </Link>
-          </>
+          <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
+            Jobs
+          </Link>
         }
       />
 
@@ -215,7 +225,16 @@ export default function AdminCandidatesPage() {
         )}
       </AdminStatsGrid>
 
-      <section className="mt-6">
+      <section className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
+        {workflowCards.map((card) => (
+          <div key={card.step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-black text-slate-950">{card.step}</div>
+            <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">{card.description}</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-5">
         <AdminFilterBar>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_auto]">
             <div className="relative">
@@ -270,7 +289,7 @@ export default function AdminCandidatesPage() {
               type="button"
               onClick={resetFilters}
               disabled={!hasActiveFilters}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Clear filters
             </button>
@@ -283,7 +302,7 @@ export default function AdminCandidatesPage() {
         </AdminFilterBar>
       </section>
 
-      <section className="mt-6">
+      <section className="mt-5">
         <AdminSectionCard
           eyebrow="Stage view"
           title="Filtered pipeline"
@@ -293,7 +312,7 @@ export default function AdminCandidatesPage() {
             {loading
               ? Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-24" />)
               : stageCounts.map((stage) => (
-                  <div key={stage.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div key={stage.id} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center gap-2">
                       <span className={`h-2.5 w-2.5 rounded-full ${stage.dotClassName}`} />
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -307,7 +326,7 @@ export default function AdminCandidatesPage() {
         </AdminSectionCard>
       </section>
 
-      <section className="mt-6">
+      <section className="mt-5">
         <AdminSectionCard
           eyebrow="Results"
           title="Candidate list"
@@ -341,16 +360,16 @@ export default function AdminCandidatesPage() {
                   <Link
                     key={candidate.id}
                     href={`/admin/candidates/${candidate.id}`}
-                    className="block rounded-[28px] border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm"
+                    className="block rounded-[12px] border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
                   >
-                    <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-xl font-black tracking-tight text-slate-950">
+                          <div className="truncate text-lg font-black tracking-tight text-slate-950">
                             {candidate.full_name || 'Unnamed candidate'}
                           </div>
                           <span
-                            className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}
+                            className={`rounded-[999px] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}
                           >
                             {stage.label}
                           </span>
@@ -392,7 +411,7 @@ export default function AdminCandidatesPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className={`rounded-2xl px-4 py-3 text-center ${getScoreTone(candidate.score)}`}>
+                        <div className={`rounded-[10px] px-4 py-3 text-center ${getScoreTone(candidate.score)}`}>
                           <div className="text-2xl font-black">{candidate.score ?? '--'}</div>
                           <div className="text-[10px] font-black uppercase tracking-[0.16em]">
                             {getScoreLabel(candidate.score)}

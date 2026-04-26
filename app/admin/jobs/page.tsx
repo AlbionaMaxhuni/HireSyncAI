@@ -14,6 +14,7 @@ import {
   adminDangerButtonClassName,
   adminInputClassName,
   adminPrimaryButtonClassName,
+  adminSelectClassName,
   adminSecondaryButtonClassName,
   adminTextareaClassName,
 } from '@/components/admin/AdminPrimitives'
@@ -113,6 +114,21 @@ export default function AdminJobsPage() {
     })
   }, [jobs, search])
 
+  const workflowCards = [
+    {
+      step: '1. Create role',
+      description: 'Write the title and a clear brief. The job starts private by default.',
+    },
+    {
+      step: '2. Publish role',
+      description: 'Publish only when the role is ready to be visible on the public jobs page.',
+    },
+    {
+      step: '3. Open role',
+      description: 'Use the job page to review applicants, process CVs, and move people forward.',
+    },
+  ]
+
   const createJob = async (event: FormEvent) => {
     event.preventDefault()
 
@@ -193,17 +209,12 @@ export default function AdminJobsPage() {
 
       <AdminPageHeader
         eyebrow="Jobs"
-        title="Job management"
-        description="Keep roles clear, searchable, and easy to manage. This page is now focused on the two things that matter most: finding a role fast and creating a strong brief."
+        title="Jobs"
+        description="This page should feel simple: create a role, publish it when ready, then open it to manage applicants."
         actions={
-          <>
-            <Link href="/admin/candidates" className={adminSecondaryButtonClassName}>
-              Candidates
-            </Link>
-            <Link href="/admin/analytics" className={adminSecondaryButtonClassName}>
-              Analytics
-            </Link>
-          </>
+          <Link href="/admin/candidates" className={adminSecondaryButtonClassName}>
+            Candidates
+          </Link>
         }
       />
 
@@ -243,7 +254,16 @@ export default function AdminJobsPage() {
         )}
       </AdminStatsGrid>
 
-      <section className="mt-6">
+      <section className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
+        {workflowCards.map((card) => (
+          <div key={card.step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-black text-slate-950">{card.step}</div>
+            <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">{card.description}</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-5">
         <AdminFilterBar>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
             <div className="relative">
@@ -256,7 +276,7 @@ export default function AdminJobsPage() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">
+              <div className="rounded-[10px] bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">
                 {filteredJobs.length} result(s)
               </div>
               {search ? (
@@ -269,11 +289,11 @@ export default function AdminJobsPage() {
         </AdminFilterBar>
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <AdminSectionCard
           eyebrow="Open roles"
-          title="Job list"
-          description="Review draft and published briefs, control visibility, and open the right role quickly."
+          title="Role list"
+          description="Keep the list clean: draft roles stay private, published roles are visible to candidates."
         >
           <div className="space-y-4">
             {loading ? (
@@ -306,21 +326,28 @@ export default function AdminJobsPage() {
                 return (
                   <div
                     key={job.id}
-                    className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300"
+                    className="group relative rounded-[12px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
                   >
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
+                    <Link
+                      href={`/admin/jobs/${job.id}`}
+                      className="block rounded-[10px] transition group-hover:opacity-100"
+                    >
+                      <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="rounded-2xl bg-slate-950 p-2 text-white">
+                          <div className="rounded-[10px] bg-slate-950 p-2 text-white">
                             <Briefcase size={16} />
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <div className="truncate text-xl font-black tracking-tight text-slate-950">{job.title}</div>
+                              <div className="truncate text-lg font-black tracking-tight text-slate-950">{job.title}</div>
                               <span
-                                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusMeta.badgeClassName}`}
+                                className={`rounded-[999px] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusMeta.badgeClassName}`}
                               >
                                 {statusMeta.label}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400 transition group-hover:text-slate-700">
+                                Open role
+                                <ArrowRight size={14} />
                               </span>
                             </div>
                             <div className="mt-1 text-xs font-semibold text-slate-500">
@@ -339,33 +366,29 @@ export default function AdminJobsPage() {
                           <AdminPill label={`${queued} queued`} tone={queued > 0 ? 'warning' : 'neutral'} />
                         </div>
                       </div>
+                    </Link>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/admin/jobs/${job.id}`} className={adminPrimaryButtonClassName}>
-                          Open job
-                          <ArrowRight size={16} />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateJobStatus(job.id, normalizedStatus === 'published' ? 'draft' : 'published')
-                          }
-                          disabled={updatingJobId === job.id}
-                          className={adminSecondaryButtonClassName}
-                        >
-                          {updatingJobId === job.id ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : normalizedStatus === 'published' ? (
-                            'Move to draft'
-                          ) : (
-                            'Publish'
-                          )}
-                        </button>
-                        <button onClick={() => deleteJob(job.id)} className={adminDangerButtonClassName}>
-                          <Trash2 size={16} />
-                          Delete
-                        </button>
-                      </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateJobStatus(job.id, normalizedStatus === 'published' ? 'draft' : 'published')
+                        }
+                        disabled={updatingJobId === job.id}
+                        className={adminSecondaryButtonClassName}
+                      >
+                        {updatingJobId === job.id ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : normalizedStatus === 'published' ? (
+                          'Move to draft'
+                        ) : (
+                          'Publish'
+                        )}
+                      </button>
+                      <button onClick={() => deleteJob(job.id)} className={adminDangerButtonClassName}>
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 )
@@ -376,10 +399,10 @@ export default function AdminJobsPage() {
 
         <AdminSectionCard
           eyebrow="Create"
-          title="New job brief"
-          description="Start private by default, then publish only when the brief is ready for candidates."
+          title="Create new role"
+          description="Start with a draft. Publish it only when the brief is clean and candidate-ready."
         >
-          <form onSubmit={createJob} className="space-y-5">
+          <form onSubmit={createJob} className="space-y-4">
             <div>
               <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Job title</label>
               <input
@@ -409,7 +432,7 @@ export default function AdminJobsPage() {
               <select
                 value={jobStatus}
                 onChange={(event) => setJobStatus(event.target.value as JobStatus)}
-                className={`mt-2 ${adminInputClassName}`}
+                className={`mt-2 w-full ${adminSelectClassName}`}
               >
                 <option value="draft">Draft (recommended)</option>
                 <option value="published">Published immediately</option>
@@ -425,12 +448,12 @@ export default function AdminJobsPage() {
               {creating ? 'Creating job...' : 'Create job'}
             </button>
 
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-black text-slate-900">What belongs in a good brief</div>
+            <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-black text-slate-900">Keep the brief simple and useful</div>
               <div className="mt-2 space-y-2 text-sm font-semibold leading-relaxed text-slate-500">
-                <div>Mission of the role and expected ownership.</div>
-                <div>Must-have skills and seniority level.</div>
-                <div>What you want to validate during interviews.</div>
+                <div>Explain what this person will own.</div>
+                <div>List the must-have skills and level.</div>
+                <div>Say what you want to confirm in interviews.</div>
               </div>
             </div>
           </form>

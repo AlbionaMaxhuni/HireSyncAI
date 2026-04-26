@@ -206,7 +206,7 @@ export default function AdminCandidateProfilePage() {
           <div className="mt-6">
             <Link
               href="/admin/candidates"
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
             >
               Back to candidates
             </Link>
@@ -229,6 +229,11 @@ export default function AdminCandidateProfilePage() {
     companyName: workspace?.name || 'our team',
     stage: emailTemplateStage,
   })
+  const reviewSteps = [
+    '1. Read the summary and CV first.',
+    '2. Decide the next stage and update it.',
+    '3. Save a note before moving on.',
+  ]
 
   const candidateEmailHref = candidate.email
     ? buildMailtoHref(candidate.email, emailDraft.subject, emailDraft.body)
@@ -286,22 +291,22 @@ export default function AdminCandidateProfilePage() {
     <AppShell>
       <Toast toast={toast} onClose={() => setToast({ open: false })} />
 
-      <section className="rounded-[32px] border border-slate-200 bg-[linear-gradient(135deg,_#07111f_0%,_#0f2746_45%,_#114f69_100%)] px-6 py-6 text-white shadow-[0_24px_70px_rgba(3,7,18,0.18)] md:px-8 md:py-8">
+      <section className="rounded-[14px] border border-slate-200 bg-[linear-gradient(135deg,_#07111f_0%,_#0f2746_45%,_#114f69_100%)] px-6 py-6 text-white shadow-[0_24px_70px_rgba(3,7,18,0.18)] md:px-7 md:py-7">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <Link
               href="/admin/candidates"
-              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/15"
+              className="inline-flex items-center gap-2 rounded-[999px] border border-white/12 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/15"
             >
               <ArrowLeft size={14} />
               Back to candidates
             </Link>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}>
+              <span className={`rounded-[999px] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}>
                 {stage.label}
               </span>
-              <span className="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-100">
+              <span className="rounded-[999px] border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-100">
                 {candidate.seniority || 'Seniority pending'}
               </span>
             </div>
@@ -329,7 +334,7 @@ export default function AdminCandidateProfilePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:w-[360px]">
-            <div className={`rounded-3xl px-5 py-5 text-center ${getScoreTone(candidate.score)}`}>
+            <div className={`rounded-[12px] px-5 py-5 text-center ${getScoreTone(candidate.score)}`}>
               <div className="text-[10px] font-black uppercase tracking-[0.18em]">Match score</div>
               <div className="mt-2 text-4xl font-black">{candidate.score ?? '--'}</div>
               <div className="mt-1 text-xs font-black uppercase tracking-[0.16em]">
@@ -337,13 +342,13 @@ export default function AdminCandidateProfilePage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/12 bg-white/10 px-5 py-5">
+            <div className="rounded-[12px] border border-white/12 bg-white/10 px-5 py-5">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-200">Stage control</div>
               <select
                 value={normalizeCandidateStage(candidate.status)}
                 onChange={(event) => handleStageChange(event.target.value as CandidateStage)}
                 disabled={updatingStage}
-                className="mt-3 w-full rounded-2xl border border-white/12 bg-white/10 px-3 py-3 text-sm font-semibold text-white outline-none transition"
+                className="mt-3 w-full rounded-[10px] border border-white/12 bg-white/10 px-3 py-3 text-sm font-semibold text-white outline-none transition"
               >
                 {PIPELINE_STAGES.map((option) => (
                   <option key={option.id} value={option.id} className="text-slate-900">
@@ -356,13 +361,13 @@ export default function AdminCandidateProfilePage() {
             <button
               onClick={openOriginalResume}
               disabled={openingResume}
-              className="inline-flex items-center justify-center gap-2 rounded-3xl border border-white/12 bg-white/10 px-5 py-4 text-sm font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-[12px] border border-white/12 bg-white/10 px-5 py-4 text-sm font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {openingResume ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               Open CV
             </button>
 
-            <div className="rounded-3xl border border-white/12 bg-white/10 px-5 py-4">
+            <div className="rounded-[12px] border border-white/12 bg-white/10 px-5 py-4">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-200">
                 Processing state
               </div>
@@ -372,13 +377,24 @@ export default function AdminCandidateProfilePage() {
         </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How to use this profile</div>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {reviewSteps.map((step) => (
+            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+              {step}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.12fr_0.88fr]">
         <Card className="p-6">
           <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
             <Sparkles size={14} />
             AI assessment
           </div>
-          <div className="mt-4 rounded-[28px] bg-slate-900 p-6 text-white">
+          <div className="mt-4 rounded-[12px] bg-slate-900 p-6 text-white">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
               <BrainCircuit size={14} />
               Executive summary
@@ -389,7 +405,7 @@ export default function AdminCandidateProfilePage() {
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <div className="rounded-[28px] border border-emerald-100 bg-emerald-50/70 p-5">
+            <div className="rounded-[12px] border border-emerald-100 bg-emerald-50/70 p-5">
               <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
                 <CheckCircle2 size={14} />
                 Skills surfaced
@@ -401,7 +417,7 @@ export default function AdminCandidateProfilePage() {
                   skills.map((skill) => (
                     <span
                       key={skill}
-                      className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700 shadow-sm"
+                      className="rounded-[999px] bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700 shadow-sm"
                     >
                       {skill}
                     </span>
@@ -410,7 +426,7 @@ export default function AdminCandidateProfilePage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-rose-100 bg-rose-50/70 p-5">
+            <div className="rounded-[12px] border border-rose-100 bg-rose-50/70 p-5">
               <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-rose-700">
                 <ShieldAlert size={14} />
                 Risk signals
@@ -422,7 +438,7 @@ export default function AdminCandidateProfilePage() {
                   </div>
                 ) : (
                   redFlags.map((flag, index) => (
-                    <div key={`${flag}-${index}`} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-rose-800 shadow-sm">
+                    <div key={`${flag}-${index}`} className="rounded-[10px] bg-white px-4 py-3 text-sm font-semibold text-rose-800 shadow-sm">
                       {flag}
                     </div>
                   ))
@@ -443,7 +459,7 @@ export default function AdminCandidateProfilePage() {
             <MetaItem label="Created" value={new Date(candidate.created_at).toLocaleDateString()} />
           </div>
 
-          <div className="mt-6 rounded-[28px] bg-slate-50 p-5">
+          <div className="mt-6 rounded-[12px] bg-slate-50 p-5">
             <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
               <Clock3 size={14} />
               Interview prompts
@@ -453,7 +469,7 @@ export default function AdminCandidateProfilePage() {
                 <div className="text-sm font-semibold text-slate-500">No interview prompts generated yet.</div>
               ) : (
                 interviewQuestions.map((question, index) => (
-                  <div key={`${question}-${index}`} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                  <div key={`${question}-${index}`} className="rounded-[10px] bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                     {question}
                   </div>
                 ))
@@ -461,7 +477,7 @@ export default function AdminCandidateProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[28px] border border-blue-100 bg-blue-50/70 p-5">
+          <div className="mt-6 rounded-[12px] border border-blue-100 bg-blue-50/70 p-5">
             <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">
               <Mail size={14} />
               Candidate outreach
@@ -473,7 +489,7 @@ export default function AdminCandidateProfilePage() {
             <select
               value={emailTemplateStage}
               onChange={(event) => setEmailTemplateStage(event.target.value as CandidateStage)}
-              className="mt-4 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-900"
+              className="mt-4 w-full rounded-[10px] border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-900"
             >
               {PIPELINE_STAGES.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -482,7 +498,7 @@ export default function AdminCandidateProfilePage() {
               ))}
             </select>
 
-            <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+            <div className="mt-4 rounded-[10px] border border-blue-100 bg-white p-4 shadow-sm">
               <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Subject</div>
               <div className="mt-2 text-sm font-black text-slate-950">{emailDraft.subject}</div>
               <div className="mt-4 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-slate-600">
@@ -495,7 +511,7 @@ export default function AdminCandidateProfilePage() {
                 type="button"
                 onClick={sendCandidateEmail}
                 disabled={sendingCandidateEmail || !candidate.email}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {sendingCandidateEmail ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 {sendingCandidateEmail ? 'Sending email...' : 'Send email now'}
@@ -509,7 +525,7 @@ export default function AdminCandidateProfilePage() {
                     setToast({ open: true, type: 'error', message: 'This candidate does not have an email address yet.' })
                   }
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
               >
                 <Mail size={16} />
                 Open email draft
@@ -518,7 +534,7 @@ export default function AdminCandidateProfilePage() {
               <button
                 type="button"
                 onClick={copyEmailDraft}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 <Copy size={16} />
                 Copy message
@@ -536,7 +552,7 @@ export default function AdminCandidateProfilePage() {
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-            <form onSubmit={handleAddNote} className="rounded-[28px] bg-slate-50 p-5">
+            <form onSubmit={handleAddNote} className="rounded-[12px] bg-slate-50 p-5">
               <div className="text-lg font-black tracking-tight text-slate-900">Add context for the hiring team</div>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
                 Capture interview impressions, concerns, or evidence for your next stage decision.
@@ -547,13 +563,13 @@ export default function AdminCandidateProfilePage() {
                 onChange={(event) => setNewNote(event.target.value)}
                 placeholder="Write a structured note for the team..."
                 rows={8}
-                className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-slate-900"
+                className="mt-4 w-full resize-none rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-slate-900"
               />
 
               <button
                 type="submit"
                 disabled={submittingNote || !newNote.trim()}
-                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-[10px] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submittingNote ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 {submittingNote ? 'Saving note...' : 'Save note'}
@@ -562,12 +578,12 @@ export default function AdminCandidateProfilePage() {
 
             <div className="space-y-3">
               {notes.length === 0 ? (
-                <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 p-8 text-sm font-semibold text-slate-500">
+                <div className="rounded-[12px] border border-dashed border-slate-200 bg-slate-50 p-8 text-sm font-semibold text-slate-500">
                   No internal notes yet. Start documenting the review so the decision trail stays visible.
                 </div>
               ) : (
                 notes.map((note) => (
-                  <div key={note.id} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div key={note.id} className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-black text-slate-900">
                         {note.user_email ? note.user_email.split('@')[0] : 'Team member'}
@@ -588,7 +604,7 @@ export default function AdminCandidateProfilePage() {
 
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+    <div className="flex items-start justify-between gap-4 rounded-[10px] border border-slate-200 bg-white px-4 py-3">
       <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
       <div className="max-w-[60%] text-right text-sm font-semibold text-slate-700">{value}</div>
     </div>

@@ -195,14 +195,12 @@ async function ensureWorkspaceForEligibleAdmin(
   profile: ProfileAccessRow | null
 ) {
   const ownJobs = await admin.from('jobs').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-  const totalJobs = await admin.from('jobs').select('id', { count: 'exact', head: true })
 
   const shouldProvisionWorkspace =
     getExplicitUserRole(user) === 'admin' ||
     profile?.role === 'admin' ||
     isConfiguredAdminEmail(user.email) ||
-    (!ownJobs.error && (ownJobs.count ?? 0) > 0) ||
-    (!totalJobs.error && (totalJobs.count ?? 0) === 0)
+    (!ownJobs.error && (ownJobs.count ?? 0) > 0)
 
   if (!shouldProvisionWorkspace) {
     return null

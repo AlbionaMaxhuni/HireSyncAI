@@ -164,6 +164,12 @@ export default function AdminAnalyticsPage() {
     })
   }, [candidates, jobs, notes])
 
+  const analyticsSteps = [
+    '1. Check pipeline stage distribution first.',
+    '2. Look at queued or failed processing before deeper analysis.',
+    '3. Compare roles only after the top-level signals make sense.',
+  ]
+
   return (
     <AppShell>
       <Toast toast={toast} onClose={() => setToast({ open: false })} />
@@ -171,16 +177,11 @@ export default function AdminAnalyticsPage() {
       <AdminPageHeader
         eyebrow="Analytics"
         title="Hiring analytics"
-        description="A simplified analytics page with the signals that are actually useful: pipeline movement, score quality, note coverage, and role performance."
+        description="Keep this page practical: first understand the pipeline, then check operational issues, then compare jobs."
         actions={
-          <>
-            <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
-              Jobs
-            </Link>
-            <Link href="/admin/candidates" className={adminSecondaryButtonClassName}>
-              Candidates
-            </Link>
-          </>
+          <Link href="/admin/candidates" className={adminSecondaryButtonClassName}>
+            Candidates
+          </Link>
         }
       />
 
@@ -225,11 +226,22 @@ export default function AdminAnalyticsPage() {
         )}
       </AdminStatsGrid>
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How to read this page</div>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {analyticsSteps.map((step) => (
+            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+              {step}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <AdminSectionCard
           eyebrow="Pipeline"
-          title="Stage distribution"
-          description="See where candidates are concentrated and how far they move through the process."
+          title="Where candidates are now"
+          description="This is the fastest way to understand if the pipeline is balanced or stuck."
         >
           <div className="space-y-4">
             {loading
@@ -258,8 +270,8 @@ export default function AdminAnalyticsPage() {
 
         <AdminSectionCard
           eyebrow="Signals"
-          title="Operational health"
-          description="The most important performance and maintenance signals in one place."
+          title="What needs attention"
+          description="Check queue health and source mix before going deeper into the numbers."
         >
           <div className="space-y-3">
             {loading ? (
@@ -276,7 +288,7 @@ export default function AdminAnalyticsPage() {
                   <SignalCard label="Hired" value={String(queueStats.hired)} tone="success" />
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
                   <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                     <Activity size={14} />
                     Source mix
@@ -302,11 +314,11 @@ export default function AdminAnalyticsPage() {
         </AdminSectionCard>
       </section>
 
-      <section className="mt-6">
+      <section className="mt-5">
         <AdminSectionCard
           eyebrow="By role"
-          title="Job performance"
-          description="Compare applicant volume, progress rate, and collaboration activity by role."
+          title="Roles at a glance"
+          description="Use this table only after the pipeline and queue look healthy."
         >
           <div className="overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-y-3">
@@ -347,8 +359,8 @@ export default function AdminAnalyticsPage() {
                   </tr>
                 ) : (
                   jobRows.map((row) => (
-                    <tr key={row.job.id} className="rounded-[24px] bg-slate-50">
-                      <td className="rounded-l-[24px] px-4 py-4 text-sm font-black text-slate-950">
+                    <tr key={row.job.id} className="rounded-[12px] bg-slate-50">
+                      <td className="rounded-l-[12px] px-4 py-4 text-sm font-black text-slate-950">
                         <Link href={`/admin/jobs/${row.job.id}`} className="inline-flex items-center gap-2 hover:text-blue-700">
                           <Briefcase size={15} />
                           {row.job.title}
@@ -357,7 +369,7 @@ export default function AdminAnalyticsPage() {
                       <td className="px-4 py-4 text-sm font-semibold text-slate-600">{row.total}</td>
                       <td className="px-4 py-4 text-sm font-semibold text-slate-600">{row.progressed}</td>
                       <td className="px-4 py-4 text-sm font-semibold text-slate-600">{row.conversion}</td>
-                      <td className="rounded-r-[24px] px-4 py-4 text-sm font-semibold text-slate-600">{row.noteCount}</td>
+                      <td className="rounded-r-[12px] px-4 py-4 text-sm font-semibold text-slate-600">{row.noteCount}</td>
                     </tr>
                   ))
                 )}
@@ -387,9 +399,9 @@ function SignalCard({
         : 'bg-rose-50 text-rose-700'
 
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-4">
+    <div className="rounded-[12px] border border-slate-200 bg-white p-4">
       <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className={['mt-3 inline-flex rounded-2xl px-4 py-3 text-2xl font-black tracking-tight', className].join(' ')}>
+      <div className={['mt-3 inline-flex rounded-[10px] px-4 py-3 text-2xl font-black tracking-tight', className].join(' ')}>
         {value}
       </div>
     </div>

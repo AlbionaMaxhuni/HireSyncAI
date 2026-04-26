@@ -106,6 +106,21 @@ export default function JobDetailClient({
     }
   }, [candidates])
 
+  const workflowCards = [
+    {
+      step: '1. Add candidates',
+      description: 'Use bulk upload for CV files or add one profile manually.',
+    },
+    {
+      step: '2. Process the queue',
+      description: 'Run AI screening so summaries, skills, and score become visible.',
+    },
+    {
+      step: '3. Move stages',
+      description: 'Open strong candidates or change their stage directly from the board.',
+    },
+  ]
+
   const refreshCandidates = async () => {
     setRefreshing(true)
 
@@ -340,7 +355,7 @@ export default function JobDetailClient({
         <div className="max-w-4xl">
           <button
             onClick={() => router.push('/admin/jobs')}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-600 transition hover:bg-slate-200"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-600 transition hover:bg-slate-200"
           >
             <ArrowLeft size={14} />
             Back to jobs
@@ -360,7 +375,16 @@ export default function JobDetailClient({
         </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
+        {workflowCards.map((card) => (
+          <div key={card.step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-black text-slate-950">{card.step}</div>
+            <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{card.description}</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-md">
@@ -369,7 +393,7 @@ export default function JobDetailClient({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by name, email or skill"
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
+                className="w-full rounded-[10px] border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
               />
             </div>
 
@@ -379,7 +403,7 @@ export default function JobDetailClient({
                   key={option}
                   onClick={() => setProcessingFilter(option)}
                   className={[
-                    'rounded-full px-3 py-2 text-xs font-black uppercase tracking-[0.14em] transition',
+                    'rounded-[10px] px-3 py-2 text-xs font-black uppercase tracking-[0.14em] transition',
                     processingFilter === option
                       ? 'bg-slate-900 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
@@ -407,16 +431,16 @@ export default function JobDetailClient({
         <Card className="overflow-hidden">
           <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
             <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-              Screening Principle
+              How to manage this role
             </div>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-              AI generates structure, highlights and interview prompts. Human reviewers should still own stage
-              movement and final hiring decisions.
+              Start with queued CVs, then review summaries and move candidates one stage at a time. AI should assist,
+              not replace the final decision.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 p-5">
             {PIPELINE_STAGES.map((stage) => (
-              <div key={stage.id} className="rounded-3xl border border-slate-200 bg-white p-4">
+              <div key={stage.id} className="rounded-[12px] border border-slate-200 bg-white p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                   {stage.shortLabel}
                 </div>
@@ -441,22 +465,22 @@ export default function JobDetailClient({
                       {stage.label}
                     </div>
                   </div>
-                  <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">
+                  <div className="rounded-[999px] bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">
                     {groupedCandidates[stage.id].length}
                   </div>
                 </div>
 
-                <div className="min-h-[540px] rounded-[30px] border border-slate-200 bg-slate-50/80 p-3">
+                <div className="min-h-[540px] rounded-[14px] border border-slate-200 bg-slate-50/80 p-3">
                   <div className="space-y-3">
                     {groupedCandidates[stage.id].length === 0 ? (
-                      <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/70 p-5 text-sm font-semibold text-slate-500">
+                      <div className="rounded-[12px] border border-dashed border-slate-200 bg-white/70 p-5 text-sm font-semibold text-slate-500">
                         No candidates in this stage.
                       </div>
                     ) : (
                       groupedCandidates[stage.id].map((candidate) => (
                         <div
                           key={candidate.id}
-                          className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300"
+                          className="rounded-[12px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -470,7 +494,7 @@ export default function JobDetailClient({
 
                             <button
                               onClick={() => deleteCandidate(candidate.id)}
-                              className="rounded-2xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              className="rounded-[10px] p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                               aria-label="Delete candidate"
                             >
                               <Trash2 size={15} />
@@ -478,13 +502,13 @@ export default function JobDetailClient({
                           </div>
 
                           <div className="mt-4 flex items-center gap-2">
-                            <div className={`rounded-2xl px-3 py-2 ${getScoreTone(candidate.score)}`}>
+                            <div className={`rounded-[10px] px-3 py-2 ${getScoreTone(candidate.score)}`}>
                               <div className="text-xl font-black">{candidate.score ?? '--'}</div>
                               <div className="text-[10px] font-black uppercase tracking-[0.16em]">
                                 {getScoreLabel(candidate.score)}
                               </div>
                             </div>
-                            <div className="flex-1 rounded-2xl bg-slate-50 px-3 py-2">
+                            <div className="flex-1 rounded-[10px] bg-slate-50 px-3 py-2">
                               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Processing
                               </div>
@@ -505,7 +529,7 @@ export default function JobDetailClient({
                               {candidate.skills?.slice(0, 4).map((skill) => (
                                 <span
                                   key={skill}
-                                  className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600"
+                                  className="rounded-[999px] bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600"
                                 >
                                   {skill}
                                 </span>
@@ -514,7 +538,7 @@ export default function JobDetailClient({
                           )}
 
                           {candidate.processing_error && (
-                            <div className="mt-4 rounded-2xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                            <div className="mt-4 rounded-[10px] bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                               {candidate.processing_error}
                             </div>
                           )}
@@ -526,7 +550,7 @@ export default function JobDetailClient({
                                 updateCandidateStage(candidate.id, event.target.value as CandidateStage)
                               }
                               disabled={updatingId === candidate.id}
-                              className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-900 disabled:opacity-50"
+                              className="rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-900 disabled:opacity-50"
                             >
                               {PIPELINE_STAGES.map((option) => (
                                 <option key={option.id} value={option.id}>
@@ -537,7 +561,7 @@ export default function JobDetailClient({
 
                             <Link
                               href={`/admin/candidates/${candidate.id}`}
-                              className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+                              className="inline-flex items-center justify-center rounded-[10px] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
                             >
                               Open
                             </Link>
@@ -559,8 +583,12 @@ export default function JobDetailClient({
               Bulk upload resumes
             </div>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-              Import PDF or DOCX files directly into this job and send them through the queue when you are ready.
+              Import PDF or DOCX files directly into this job. The system now tries to analyze them automatically,
+              and anything left over can still be processed from the queue.
             </p>
+            <div className="mt-4 rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+              Best for large batches of CVs that already belong to this role.
+            </div>
             <div className="mt-5">
               <BulkUploadDropzone jobId={job.id} onUploaded={refreshCandidates} />
             </div>
@@ -575,31 +603,34 @@ export default function JobDetailClient({
               Useful for referrals, direct outreach, or importing a profile before the original CV is available.
               Pasted resume text is analyzed immediately when possible.
             </p>
+            <div className="mt-4 rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+              Best for one candidate at a time when you already have the resume text or recruiter notes.
+            </div>
 
             <form onSubmit={createCandidate} className="mt-5 space-y-4">
               <input
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 placeholder="Candidate name"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
+                className="w-full rounded-[10px] border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
               />
               <input
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Email address"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
+                className="w-full rounded-[10px] border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-900"
               />
               <textarea
                 value={resumeText}
                 onChange={(event) => setResumeText(event.target.value)}
                 placeholder="Paste resume text or recruiter summary"
                 rows={7}
-                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-slate-900"
+                className="w-full resize-none rounded-[10px] border border-slate-200 px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-slate-900"
               />
               <button
                 type="submit"
                 disabled={creating || !fullName.trim() || !resumeText.trim()}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {creating ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
                 {creating ? 'Adding candidate...' : 'Add candidate'}
@@ -614,7 +645,7 @@ export default function JobDetailClient({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 text-center shadow-sm">
+    <div className="rounded-[12px] border border-slate-200 bg-white px-4 py-4 text-center shadow-sm">
       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
       <div className="mt-2 text-2xl font-black tracking-tight text-slate-900">{value}</div>
     </div>
@@ -638,7 +669,7 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={busy || disabled}
-      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {busy ? <Loader2 size={16} className="animate-spin" /> : <Icon size={16} />}
       {label}

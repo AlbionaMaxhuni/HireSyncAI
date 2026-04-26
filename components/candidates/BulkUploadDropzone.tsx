@@ -36,7 +36,7 @@ export default function BulkUploadDropzone({ jobId, onUploaded }: Props) {
       try {
         const fd = new FormData()
         fd.append('jobId', jobId)
-        for (const f of arr) fd.append('files', f)
+        for (const file of arr) fd.append('files', file)
 
         const res = await fetch('/api/candidates/bulk-upload', {
           method: 'POST',
@@ -50,10 +50,32 @@ export default function BulkUploadDropzone({ jobId, onUploaded }: Props) {
         }
 
         const created = Number(json?.created ?? 0)
-        setLastMsg(`Uploaded: ${created} candidate(s).`)
+        const processed = Number(json?.processed ?? 0)
+        const queued = Number(json?.queued ?? 0)
+        const errors = Array.isArray(json?.errors)
+          ? json.errors.filter((item: unknown) => typeof item === 'string')
+          : []
+        const processingErrors = Array.isArray(json?.processingErrors)
+          ? json.processingErrors.filter((item: unknown) => typeof item === 'string')
+          : []
+
+        if (created === 0) {
+          setLastMsg(errors[0] || 'No candidate records were created.')
+          return
+        }
+
+        const messageParts = [
+          `Created: ${created} candidate(s).`,
+          processed > 0 ? `Analyzed automatically: ${processed}.` : null,
+          queued > 0 ? `Still queued: ${queued}.` : null,
+          errors[0] ? `Skipped: ${errors[0]}` : null,
+          processingErrors[0] ? `Processing issue: ${processingErrors[0]}` : null,
+        ].filter(Boolean)
+
+        setLastMsg(messageParts.join(' '))
         onUploaded?.(created)
-      } catch (e: unknown) {
-        setLastMsg(getErrorMessage(e))
+      } catch (error: unknown) {
+        setLastMsg(getErrorMessage(error))
       } finally {
         setUploading(false)
       }
@@ -62,13 +84,13 @@ export default function BulkUploadDropzone({ jobId, onUploaded }: Props) {
   )
 
   const onDrop = useCallback(
-    async (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      e.stopPropagation()
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      event.stopPropagation()
       setDragging(false)
       if (uploading) return
-      if (e.dataTransfer.files?.length) {
-        await uploadFiles(e.dataTransfer.files)
+      if (event.dataTransfer.files?.length) {
+        await uploadFiles(event.dataTransfer.files)
       }
     },
     [uploadFiles, uploading]
@@ -82,54 +104,54 @@ export default function BulkUploadDropzone({ jobId, onUploaded }: Props) {
   return (
     <div>
       <div
-        onDragEnter={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
+        onDragEnter={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
           setDragging(true)
         }}
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
+        onDragOver={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
           setDragging(true)
         }}
-        onDragLeave={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
+        onDragLeave={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
           setDragging(false)
         }}
         onDrop={onDrop}
-        className={`rounded-2xl border-2 border-dashed p-4 transition ${borderClass}`}
+        className={`rounded-[12px] border-2 border-dashed p-4 transition ${borderClass}`}
       >
         <div className="text-sm font-black text-slate-900">Bulk upload resumes</div>
         <div className="mt-1 text-xs font-semibold text-slate-500">
-          Drag & drop PDF/DOCX files here (multiple files supported).
+          Drag and drop PDF or DOCX files here. Multiple files are supported.
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-xs font-black text-white transition hover:bg-blue-600 disabled:opacity-40">
-            {uploading ? 'Uploading…' : 'Choose files'}
+          <label className="inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-slate-900 px-4 py-2 text-xs font-black text-white transition hover:bg-blue-600 disabled:opacity-40">
+            {uploading ? 'Uploading...' : 'Choose files'}
             <input
               type="file"
               multiple
               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               className="hidden"
               disabled={uploading}
-              onChange={(e) => {
-                if (!e.target.files) return
-                uploadFiles(e.target.files)
-                e.currentTarget.value = ''
+              onChange={(event) => {
+                if (!event.target.files) return
+                uploadFiles(event.target.files)
+                event.currentTarget.value = ''
               }}
             />
           </label>
 
-          <div className="text-xs font-semibold text-slate-400">PDF / DOCX</div>
+          <div className="text-xs font-semibold text-slate-400">PDF / DOCX / max 5 MB each</div>
         </div>
 
-        {lastMsg && (
-          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700">
+        {lastMsg ? (
+          <div className="mt-3 rounded-[10px] bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700">
             {lastMsg}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

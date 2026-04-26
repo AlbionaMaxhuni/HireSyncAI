@@ -23,15 +23,15 @@ export default function LogoutPage() {
       }
 
       setDone(true)
-      router.replace('/login?method=logout')
+      router.replace('/login?message=logged_out')
     }
 
     run()
   }, [router])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_32%),linear-gradient(180deg,_#f8fbff_0%,_#edf3f8_100%)] px-4 py-8">
-      <div className="w-full max-w-md rounded-[36px] border border-white/80 bg-white/85 p-10 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_32%),linear-gradient(180deg,_#f8fbff_0%,_#edf3f8_100%)] px-2 py-3 md:px-3">
+      <div className="w-full max-w-md rounded-[20px] border border-white/80 bg-white/85 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
         {error ? (
           <>
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-600">
@@ -41,7 +41,7 @@ export default function LogoutPage() {
             <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-500">{error}</p>
             <Link
               href="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+              className="mt-6 inline-flex items-center gap-2 rounded-[10px] bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800"
             >
               <LogIn size={16} />
               Back to sign in

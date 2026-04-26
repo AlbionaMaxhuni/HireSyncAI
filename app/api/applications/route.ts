@@ -4,6 +4,7 @@ import { isJobPublic } from '@/lib/hiring'
 import { createServerSupabaseAdminClient, getOptionalServerUser } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
+const MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024
 
 function getFileExtension(name: string) {
   const normalized = name.trim().toLowerCase()
@@ -13,7 +14,7 @@ function getFileExtension(name: string) {
 }
 
 export async function POST(req: Request) {
-  const { user } = await getOptionalServerUser()
+  const { user, supabase } = await getOptionalServerUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Please sign in before applying.' }, { status: 401 })
@@ -43,16 +44,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Please upload your CV.' }, { status: 400 })
   }
 
+  if (resume.size > MAX_RESUME_SIZE_BYTES) {
+    return NextResponse.json({ error: 'CV file must be 5 MB or smaller.' }, { status: 400 })
+  }
+
   const extension = getFileExtension(resume.name)
   if (!extension) {
     return NextResponse.json({ error: 'Only PDF and DOCX files are supported.' }, { status: 400 })
   }
 
-  const supabase = createServerSupabaseAdminClient()
-
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id,title,status,workspace_id')
+    .select('id,title,status,workspace_id,workspaces(name)')
     .eq('id', jobId)
     .maybeSingle()
   if (jobError) {
@@ -78,11 +81,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You already applied for this role.' }, { status: 409 })
   }
 
+  const supabaseAdmin = createServerSupabaseAdminClient()
   const safeName = resume.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const path = `${user.id}/${jobId}/applications/${Date.now()}_${safeName}`
   const bytes = await resume.arrayBuffer()
 
-  const upload = await supabase.storage.from('resumes').upload(path, bytes, {
+  const upload = await supabaseAdmin.storage.from('resumes').upload(path, bytes, {
     contentType: resume.type || undefined,
     upsert: false,
   })
@@ -98,6 +102,11 @@ export async function POST(req: Request) {
         user_id: user.id,
         job_id: jobId,
         workspace_id: job.workspace_id ?? null,
+        job_title_snapshot: job.title,
+        company_name_snapshot:
+          typeof job.workspaces === 'object' && job.workspaces && 'name' in job.workspaces
+            ? (job.workspaces.name as string | null)
+            : null,
         full_name: fullName,
         email,
         resume_text: note,
@@ -114,6 +123,12 @@ export async function POST(req: Request) {
     .single()
 
   if (insert.error) {
+    await supabaseAdmin.storage.from('resumes').remove([path]).catch(() => undefined)
+
+    if (insert.error.code === '23505') {
+      return NextResponse.json({ error: 'You already applied for this role.' }, { status: 409 })
+    }
+
     return NextResponse.json({ error: insert.error.message }, { status: 500 })
   }
 

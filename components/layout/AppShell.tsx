@@ -67,57 +67,40 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/login?method=logout')
+    router.push('/login?message=logged_out')
   }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_36%),linear-gradient(180deg,_#f8fbff_0%,_#eef4f8_100%)] text-slate-900">
-      <aside className="fixed inset-y-0 left-0 hidden w-[288px] flex-col border-r border-white/70 bg-white/80 px-5 py-6 backdrop-blur-xl md:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-4 py-5 md:flex">
         <div className="px-3">
           <Logo />
         </div>
 
-        <div className="mt-8 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4">
+        <div className="mt-6 rounded-[14px] border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-2xl bg-slate-900 p-2 text-white">
+            <div className="mt-0.5 rounded-xl bg-slate-900 p-2 text-white">
               <ShieldCheck size={16} />
             </div>
             <div>
               <div className="text-sm font-black text-slate-900">{workspaceName}</div>
               <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                Private hiring workspace for jobs, candidates, notes, and team coordination.
+                Jobs, candidates, and hiring activity in one place.
               </p>
             </div>
           </div>
         </div>
 
-        <nav className="mt-8 space-y-1">
+        <nav className="mt-6 space-y-1">
           {primaryNav.map((item) => (
             <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
           ))}
         </nav>
 
-        <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-            Workflow Standard
-          </div>
-          <div className="mt-3 space-y-3">
-            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-              Keep AI as recommendation, not final decision.
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-              Move every candidate through a visible pipeline.
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-              Capture notes and reasons before rejection.
-            </div>
-          </div>
-        </div>
-
         <details className="group mt-auto">
-          <summary className="list-none cursor-pointer rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300">
+          <summary className="list-none cursor-pointer rounded-[14px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-lg shadow-blue-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-lg shadow-blue-100">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
@@ -127,7 +110,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <ChevronDown size={16} className="text-slate-400" />
             </div>
 
-            <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3">
+            <div className="mt-4 flex items-center justify-between rounded-[12px] bg-slate-50 px-3 py-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                   Workspace access
@@ -140,17 +123,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </summary>
 
-          <div className="mt-3 rounded-[24px] border border-white/70 bg-white/88 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+          <div className="mt-3 rounded-[14px] border border-white/70 bg-white/88 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
             <Link
               href="/"
-              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
             >
               <House size={16} className="text-slate-400" />
               Public portal
             </Link>
             <button
               onClick={handleLogout}
-              className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
+              className="mt-1 flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
             >
               <LogOut size={16} className="text-amber-700" />
               Log out
@@ -170,15 +153,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <details className="group relative">
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
                 {initials}
               </div>
               <ChevronDown size={14} className="text-slate-400" />
             </summary>
 
-            <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[28px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
-              <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[14px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
+              <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Account</div>
                 <div className="mt-2 text-base font-black text-slate-900">{fullName}</div>
                 <div className="mt-1 break-all text-sm font-semibold text-slate-500">{email}</div>
@@ -187,14 +170,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <div className="mt-2 space-y-1">
                 <Link
                   href="/"
-                  className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
                 >
                   <House size={16} className="text-slate-400" />
                   Public portal
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
+                  className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
                 >
                   <LogOut size={16} className="text-amber-700" />
                   Log out
@@ -205,9 +188,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="md:pl-[288px]">
-        <div className="mx-auto max-w-7xl p-4 pb-24 md:p-8">
-          <div className="min-h-[calc(100vh-2rem)] rounded-[32px] border border-white/80 bg-white/72 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-8">
+      <main className="md:pl-[248px]">
+        <div className="w-full p-3 pb-24 md:p-4">
+          <div className="min-h-[calc(100vh-1.5rem)] rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)] md:p-5">
             {children}
           </div>
         </div>
@@ -224,7 +207,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={[
-                  'flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[10px] font-black transition',
+                  'flex flex-col items-center justify-center rounded-[10px] px-2 py-2 text-[10px] font-black transition',
                   active ? 'bg-slate-900 text-white' : 'text-slate-500',
                 ].join(' ')}
               >
@@ -246,7 +229,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       href={item.href}
       className={[
-        'group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition-all',
+        'group flex items-center gap-3 rounded-[10px] px-4 py-2.5 text-sm font-black transition-all',
         active
           ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
           : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
