@@ -16,9 +16,11 @@ import {
   LogOut,
   type LucideIcon,
 } from 'lucide-react'
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher'
 import Logo from '@/components/branding/Logo'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/context/AuthContext'
+import { useLanguage } from '@/context/LanguageContext'
 import { getUserDisplayName } from '@/lib/auth'
 import { formatWorkspaceRole } from '@/lib/workspace'
 
@@ -58,6 +60,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [supabase] = useState(() => createClient())
   const { user, workspace } = useAuth()
+  const { t } = useLanguage()
 
   const fullName = getUserDisplayName(user, 'Hiring Team')
   const email = user?.email ?? 'workspace@hiresync.ai'
@@ -75,6 +78,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-4 py-5 md:flex">
         <div className="px-3">
           <Logo />
+        </div>
+
+        <div className="mt-4 px-3">
+          <LanguageSwitcher />
         </div>
 
         <div className="mt-6 rounded-[14px] border border-slate-200 bg-slate-50 p-4">
@@ -115,7 +122,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                   Workspace access
                 </div>
-                <div className="mt-1 text-sm font-black text-slate-900">{workspaceRole} session active</div>
+                <div className="mt-1 text-sm font-black text-slate-900">{t(`${workspaceRole} session active`)}</div>
               </div>
               <div className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
                 Live
@@ -148,43 +155,47 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Logo size="sm" />
             <div>
               <div className="text-sm font-black text-slate-900">{workspaceName}</div>
-              <div className="text-[11px] font-semibold text-slate-500">{workspaceRole} session active</div>
+              <div className="text-[11px] font-semibold text-slate-500">{t(`${workspaceRole} session active`)}</div>
             </div>
           </div>
 
-          <details className="group relative">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
+
+            <details className="group relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
-                {initials}
-              </div>
-              <ChevronDown size={14} className="text-slate-400" />
-            </summary>
+                <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
+                  {initials}
+                </div>
+                <ChevronDown size={14} className="text-slate-400" />
+              </summary>
 
-            <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[14px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
-              <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Account</div>
-                <div className="mt-2 text-base font-black text-slate-900">{fullName}</div>
-                <div className="mt-1 break-all text-sm font-semibold text-slate-500">{email}</div>
-              </div>
+              <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[14px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
+                <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Account</div>
+                  <div className="mt-2 text-base font-black text-slate-900">{fullName}</div>
+                  <div className="mt-1 break-all text-sm font-semibold text-slate-500">{email}</div>
+                </div>
 
-              <div className="mt-2 space-y-1">
-                <Link
-                  href="/"
-                  className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                >
-                  <House size={16} className="text-slate-400" />
-                  Public portal
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
-                >
-                  <LogOut size={16} className="text-amber-700" />
-                  Log out
-                </button>
+                <div className="mt-2 space-y-1">
+                  <Link
+                    href="/"
+                    className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <House size={16} className="text-slate-400" />
+                    Public portal
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
+                  >
+                    <LogOut size={16} className="text-amber-700" />
+                    Log out
+                  </button>
+                </div>
               </div>
-            </div>
-          </details>
+            </details>
+          </div>
         </div>
       </header>
 

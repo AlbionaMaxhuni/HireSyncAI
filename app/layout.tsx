@@ -1,4 +1,6 @@
 import { AuthProvider } from '@/context/AuthContext'
+import { LanguageProvider } from '@/context/LanguageContext'
+import LanguageDomTranslator from '@/components/i18n/LanguageDomTranslator'
 import type { Metadata } from 'next'
 import './globals.css'
 
@@ -23,9 +25,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+            <LanguageDomTranslator />
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   )

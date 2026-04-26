@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Loader2, LogIn } from 'lucide-react'
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher'
 import { createClient } from '@/utils/supabase/client'
 
 export default function LogoutPage() {
@@ -31,6 +32,9 @@ export default function LogoutPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_32%),linear-gradient(180deg,_#f8fbff_0%,_#edf3f8_100%)] px-2 py-3 md:px-3">
+      <div className="fixed right-4 top-4 z-50">
+        <LanguageSwitcher />
+      </div>
       <div className="w-full max-w-md rounded-[20px] border border-white/80 bg-white/85 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
         {error ? (
           <>

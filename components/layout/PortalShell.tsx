@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
 } from 'lucide-react'
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher'
 import Logo from '@/components/branding/Logo'
 import { useAuth } from '@/context/AuthContext'
 import { getUserDisplayName } from '@/lib/auth'
@@ -85,6 +86,8 @@ export default function PortalShell({ children }: { children: ReactNode }) {
               </nav>
 
               <div className="flex flex-wrap items-center gap-2">
+                <LanguageSwitcher compact />
+
                 {loading ? (
                   <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-400">
                     Checking session...

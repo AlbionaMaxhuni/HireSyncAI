@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import Logo from '@/components/branding/Logo'
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher'
 import { getPasswordChecklist, getPasswordValidationMessage } from '@/lib/auth-flow'
 import { createClient } from '@/utils/supabase/client'
 
@@ -79,6 +80,9 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.18),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(180,83,9,0.08),_transparent_34%),linear-gradient(180deg,_#f8fbff_0%,_#edf3f8_100%)] px-2 py-2 text-slate-900 md:px-3 md:py-3">
+      <div className="fixed right-4 top-4 z-50">
+        <LanguageSwitcher />
+      </div>
       <div className="mx-auto flex min-h-[calc(100vh-1rem)] w-full max-w-[1580px] items-center justify-center overflow-hidden rounded-[24px] border border-white/80 bg-white/74 shadow-[0_32px_120px_rgba(15,23,42,0.12)] backdrop-blur-xl">
         <div className="w-full max-w-md px-4 py-6 md:px-8 md:py-7">
           <div className="mb-5">
