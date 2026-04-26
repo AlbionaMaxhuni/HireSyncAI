@@ -118,13 +118,13 @@ export default function ApplicationPanel({
         </div>
       ) : !isAuthenticated ? (
         <div className="mt-4 space-y-4">
-          <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+          <div className="border-l-2 border-slate-200 pl-4">
             <div className="text-sm font-black text-slate-950">How applying works</div>
             <div className="mt-3 space-y-2">
               {applySteps.map((step, index) => (
                 <div
                   key={step}
-                  className="flex items-start gap-3 rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-relaxed text-slate-800"
+                  className="flex items-start gap-3 text-sm font-bold leading-relaxed text-slate-700"
                 >
                   <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] font-black text-white">
                     {index + 1}
@@ -158,7 +158,7 @@ export default function ApplicationPanel({
             Keep this simple. Add only the information the hiring team actually needs to review you clearly.
           </p>
 
-          <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-[10px] bg-slate-50 p-4">
             <div className="text-sm font-black text-slate-950">What to prepare</div>
             <div className="mt-3 space-y-2">
               {formChecklist.map((item) => (

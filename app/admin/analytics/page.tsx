@@ -164,12 +164,6 @@ export default function AdminAnalyticsPage() {
     })
   }, [candidates, jobs, notes])
 
-  const analyticsSteps = [
-    '1. Check pipeline stage distribution first.',
-    '2. Look at queued or failed processing before deeper analysis.',
-    '3. Compare roles only after the top-level signals make sense.',
-  ]
-
   return (
     <AppShell>
       <Toast toast={toast} onClose={() => setToast({ open: false })} />
@@ -225,17 +219,6 @@ export default function AdminAnalyticsPage() {
           </>
         )}
       </AdminStatsGrid>
-
-      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How to read this page</div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {analyticsSteps.map((step) => (
-            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-              {step}
-            </div>
-          ))}
-        </div>
-      </section>
 
       <section className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <AdminSectionCard

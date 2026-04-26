@@ -143,12 +143,6 @@ export default function AdminTeamPage() {
   }, [authLoading, supabase, workspace])
 
   const canCreateInvite = inviteEmail.trim().length > 4 && Boolean(workspace?.id) && Boolean(user?.id)
-  const teamSteps = [
-    '1. Create an invite for the teammate email.',
-    '2. They sign in with that same email address.',
-    '3. Once accepted, they appear here as an active workspace member.',
-  ]
-
   const inviteLinkBuilder = useMemo(
     () => (inviteCode: string) => {
       const nextPath = encodeURIComponent(`/auth/complete?invite=${inviteCode}`)
@@ -339,17 +333,6 @@ export default function AdminTeamPage() {
           </>
         )}
       </AdminStatsGrid>
-
-      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How team access works</div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {teamSteps.map((step) => (
-            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-              {step}
-            </div>
-          ))}
-        </div>
-      </section>
 
       <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <AdminSectionCard

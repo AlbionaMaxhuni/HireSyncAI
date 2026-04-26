@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Clock3, Sparkles } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import PortalShell from '@/components/layout/PortalShell'
-import Card from '@/components/ui/Card'
 import { PIPELINE_STAGES, normalizeCandidateStage, type CandidateRecord, type JobRecord } from '@/lib/hiring'
 import { requireAuthenticatedUser } from '@/lib/server-auth'
 
@@ -61,20 +60,11 @@ export default async function ApplicationsPage({
   const adminRequired = resolvedSearchParams.message === 'admin_required'
   const inviteInvalid =
     resolvedSearchParams.message === 'invite_invalid' || resolvedSearchParams.message === 'invite_email_mismatch'
-  const applicationGuide = [
-    {
-      label: '1. Check status',
-      description: 'Applied means your CV reached the team safely.',
-    },
-    {
-      label: '2. Watch progress',
-      description: 'Screening, interview, and final show how far the application moved.',
-    },
-    {
-      label: '3. Return only when needed',
-      description: 'This page is meant to stay simple: just status, role, and progress.',
-    },
-  ]
+  const inProgressCount = applications.filter((application) => {
+    const stage = normalizeCandidateStage(application.status)
+    return stage === 'screening' || stage === 'interview' || stage === 'final'
+  }).length
+  const queuedCount = applications.filter((application) => application.processing_status === 'queued').length
 
   return (
     <PortalShell>
@@ -111,66 +101,24 @@ export default async function ApplicationsPage({
         </div>
       )}
 
-      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Applications</div>
-          <div className="mt-2 text-3xl font-black tracking-tight text-slate-950">{applications.length}</div>
-        </Card>
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">In progress</div>
-          <div className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-            {
-              applications.filter((application) => {
-                const stage = normalizeCandidateStage(application.status)
-                return stage === 'screening' || stage === 'interview' || stage === 'final'
-              }).length
-            }
-          </div>
-        </Card>
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Processing queue</div>
-          <div className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-            {applications.filter((application) => application.processing_status === 'queued').length}
-          </div>
-        </Card>
+      <section className="mt-6 rounded-[10px] border border-slate-200 bg-white">
+        <div className="grid grid-cols-3 divide-x divide-slate-200">
+          {[
+            ['Applications', applications.length],
+            ['In progress', inProgressCount],
+            ['Queue', queuedCount],
+          ].map(([label, value]) => (
+            <div key={label} className="px-5 py-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
+              <div className="mt-2 text-3xl font-black tracking-tight text-slate-950">{value}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {applicationGuide.map((item) => (
-          <Card key={item.label} className="border-0 bg-white/80 p-5">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</div>
-            <div className="mt-3 text-lg font-black tracking-tight text-slate-950">{item.description}</div>
-          </Card>
-        ))}
-      </section>
-
-      <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Applied</div>
-          <div className="mt-3 text-lg font-black tracking-tight text-slate-950">Application received</div>
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-            Your application reached the team and is safely inside the pipeline.
-          </p>
-        </Card>
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Screening</div>
-          <div className="mt-3 text-lg font-black tracking-tight text-slate-950">Review in progress</div>
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-            The team is reviewing fit, experience, and the next best follow-up step.
-          </p>
-        </Card>
-        <Card className="border-0 bg-white/80 p-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Interview / Final</div>
-          <div className="mt-3 text-lg font-black tracking-tight text-slate-950">Advanced stages</div>
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-            These stages mean the application moved beyond initial review toward a hiring decision.
-          </p>
-        </Card>
-      </section>
-
-      <section className="mt-6 space-y-4">
+      <section className="mt-6 rounded-[10px] border border-slate-200 bg-white">
         {applications.length === 0 ? (
-          <div className="rounded-[12px] border border-dashed border-slate-200 bg-white/75 p-8">
+          <div className="p-8 text-center">
             <div className="text-lg font-black text-slate-950">You have not submitted any applications yet.</div>
             <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
               Start from the jobs page, choose a role that fits, then apply from that role page.
@@ -184,78 +132,53 @@ export default async function ApplicationsPage({
             </Link>
           </div>
         ) : (
-          applications.map((application) => {
-            const stage = PIPELINE_STAGES.find((item) => item.id === normalizeCandidateStage(application.status))!
-            const progress = getStageProgress(application.status)
-            const joinedJob = getJoinedJob(application)
-            const applicationTitle = joinedJob?.title || application.job_title_snapshot || 'Application'
-            const applicationDescription =
-              joinedJob?.description || 'Your application is safely stored in the hiring pipeline.'
-            const companyName = application.company_name_snapshot || 'Hiring team'
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70">
+                  {['Role', 'Company', 'Status', 'Progress', 'Applied'].map((header) => (
+                    <th key={header} className="px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {applications.map((application) => {
+                  const stage = PIPELINE_STAGES.find((item) => item.id === normalizeCandidateStage(application.status))!
+                  const progress = getStageProgress(application.status)
+                  const joinedJob = getJoinedJob(application)
+                  const applicationTitle = joinedJob?.title || application.job_title_snapshot || 'Application'
+                  const companyName = application.company_name_snapshot || 'Hiring team'
 
-            return (
-              <Card key={application.id} className="border-0 bg-white/85 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)]">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  return (
+                    <tr key={application.id} className="hover:bg-slate-50">
+                      <td className="max-w-[360px] px-5 py-4 text-sm font-black text-slate-950">
                         {applicationTitle}
-                      </h2>
-                      <span
-                        className={`rounded-[999px] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}
-                      >
-                        {stage.label}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                      {companyName}
-                    </div>
-                    <p className="mt-3 line-clamp-3 max-w-3xl text-sm font-semibold leading-relaxed text-slate-600">
-                      {applicationDescription}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-[999px] bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">
-                        <Clock3 size={12} />
-                        Applied {new Date(application.created_at).toLocaleDateString()}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-[999px] bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">
-                        <Sparkles size={12} />
-                        Processing: {application.processing_status || 'not started'}
-                      </span>
-                    </div>
-
-                    <div className="mt-5">
-                      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                        <span>Progress</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div className="h-3 rounded-[999px] bg-slate-100">
-                        <div
-                          className={`h-3 rounded-[999px] ${
-                            stage.id === 'rejected'
-                              ? 'bg-rose-500'
-                              : stage.id === 'hired'
-                                ? 'bg-emerald-500'
-                                : 'bg-slate-950'
-                          }`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[12px] bg-slate-950 px-5 py-4 text-white">
-                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">Status</div>
-                    <div className="mt-2 flex items-center gap-2 text-lg font-black">
-                      <CheckCircle2 size={16} className="text-emerald-300" />
-                      {stage.label}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )
-          })
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-600">{companyName}</td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${stage.badgeClassName}`}>
+                          {stage.label}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex min-w-[160px] items-center gap-3">
+                          <div className="h-2 flex-1 rounded-full bg-slate-100">
+                            <div className="h-2 rounded-full bg-slate-950" style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className="text-sm font-black text-slate-600">{progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-500">
+                        {new Date(application.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </PortalShell>

@@ -229,12 +229,6 @@ export default function AdminCandidateProfilePage() {
     companyName: workspace?.name || 'our team',
     stage: emailTemplateStage,
   })
-  const reviewSteps = [
-    '1. Read the summary and CV first.',
-    '2. Decide the next stage and update it.',
-    '3. Save a note before moving on.',
-  ]
-
   const candidateEmailHref = candidate.email
     ? buildMailtoHref(candidate.email, emailDraft.subject, emailDraft.body)
     : null
@@ -374,17 +368,6 @@ export default function AdminCandidateProfilePage() {
               <div className="mt-2 text-lg font-black text-white">{candidate.processing_status || 'Not processed'}</div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">How to use this profile</div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {reviewSteps.map((step) => (
-            <div key={step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-              {step}
-            </div>
-          ))}
         </div>
       </section>
 

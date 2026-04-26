@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowUpRight, BriefcaseBusiness, Clock3, LockKeyhole, MapPin } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, BriefcaseBusiness, Clock3, MapPin } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import PortalShell from '@/components/layout/PortalShell'
 import ApplicationPanel from '@/components/jobs/ApplicationPanel'
@@ -73,12 +73,6 @@ export default async function PublicJobDetailPage({
   const hasApplied = user ? await getHasApplied(jobId, user.id) : false
   const focusApply = resolvedSearchParams.apply === '1'
 
-  const detailBullets = [
-    'Read the role first and decide if it fits.',
-    'Sign in only when you are ready to apply.',
-    'Upload your CV and track the status from your account later.',
-  ]
-
   return (
     <PortalShell>
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -131,7 +125,7 @@ export default async function PublicJobDetailPage({
         />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="mt-6">
         <Card className="border-0 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
           <div className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">About this hiring team</div>
           <div className="mt-4 rounded-[12px] border border-slate-200 bg-slate-50 p-5">
@@ -162,26 +156,6 @@ export default async function PublicJobDetailPage({
             <p>
               If the role fits, the application is simple: sign in, upload your CV, and submit.
             </p>
-          </div>
-        </Card>
-
-        <Card className="border border-slate-200 bg-[linear-gradient(135deg,_#fffaf3_0%,_#fff4e5_48%,_#f6efe6_100%)] p-5 text-slate-950 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-          <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.24em] text-amber-800">
-            <LockKeyhole size={14} />
-            Application flow
-          </div>
-          <p className="mt-3 text-sm font-bold leading-relaxed text-slate-800">
-            The application panel on the right is the only place where the candidate needs to act.
-          </p>
-          <div className="mt-5 space-y-3">
-            {detailBullets.map((bullet) => (
-              <div
-                key={bullet}
-                className="rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm"
-              >
-                {bullet}
-              </div>
-            ))}
           </div>
         </Card>
       </section>

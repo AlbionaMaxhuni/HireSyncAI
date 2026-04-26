@@ -74,7 +74,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.12),_transparent_36%),linear-gradient(180deg,_#f8fbff_0%,_#eef4f8_100%)] text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-4 py-5 md:flex">
         <div className="px-3">
           <Logo />
@@ -84,16 +84,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <LanguageSwitcher />
         </div>
 
-        <div className="mt-6 rounded-[14px] border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-xl bg-slate-900 p-2 text-white">
-              <ShieldCheck size={16} />
-            </div>
-            <div>
-              <div className="text-sm font-black text-slate-900">{workspaceName}</div>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                Jobs, candidates, and hiring activity in one place.
-              </p>
+        <div className="mt-6 border-y border-slate-200 py-4">
+          <div className="flex items-center gap-3 px-3">
+            <ShieldCheck size={16} className="text-slate-400" />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-black text-slate-900">{workspaceName}</div>
+              <p className="mt-0.5 text-xs font-semibold text-slate-500">Hiring workspace</p>
             </div>
           </div>
         </div>
@@ -105,9 +101,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <details className="group mt-auto">
-          <summary className="list-none cursor-pointer rounded-[14px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300">
+          <summary className="list-none cursor-pointer rounded-[10px] border border-slate-200 bg-white p-3 transition hover:border-slate-300">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-lg shadow-blue-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
@@ -117,7 +113,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <ChevronDown size={16} className="text-slate-400" />
             </div>
 
-            <div className="mt-4 flex items-center justify-between rounded-[12px] bg-slate-50 px-3 py-3">
+            <div className="mt-3 flex items-center justify-between rounded-[8px] bg-slate-50 px-3 py-2.5">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                   Workspace access
@@ -130,7 +126,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </summary>
 
-          <div className="mt-3 rounded-[14px] border border-white/70 bg-white/88 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+          <div className="mt-3 rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
             <Link
               href="/"
               className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
@@ -170,7 +166,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <ChevronDown size={14} className="text-slate-400" />
               </summary>
 
-              <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[14px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
+              <div className="absolute right-0 top-full mt-3 hidden w-72 rounded-[10px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
                 <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
                   <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Account</div>
                   <div className="mt-2 text-base font-black text-slate-900">{fullName}</div>
@@ -200,8 +196,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="md:pl-[248px]">
-        <div className="w-full p-3 pb-24 md:p-4">
-          <div className="min-h-[calc(100vh-1.5rem)] rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)] md:p-5">
+        <div className="w-full p-4 pb-24 md:p-6">
+          <div className="mx-auto max-w-[1680px]">
             {children}
           </div>
         </div>

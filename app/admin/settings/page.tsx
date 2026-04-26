@@ -222,11 +222,9 @@ export default function AdminSettingsPage() {
         }
         />
 
-      <section className="mt-5 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">First-time setup</div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
           {setupCards.map((card) => (
-            <div key={card.title} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+            <div key={card.title} className="border-l-2 border-slate-200 bg-white px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-black text-slate-950">{card.title}</div>
                 <AdminPill label={card.ready ? 'Ready' : 'Needed'} tone={card.ready ? 'success' : 'warning'} />
@@ -234,7 +232,6 @@ export default function AdminSettingsPage() {
               <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{card.description}</div>
             </div>
           ))}
-        </div>
       </section>
 
       <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.9fr]">

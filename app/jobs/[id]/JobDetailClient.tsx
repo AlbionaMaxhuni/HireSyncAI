@@ -106,21 +106,6 @@ export default function JobDetailClient({
     }
   }, [candidates])
 
-  const workflowCards = [
-    {
-      step: '1. Add candidates',
-      description: 'Use bulk upload for CV files or add one profile manually.',
-    },
-    {
-      step: '2. Process the queue',
-      description: 'Run AI screening so summaries, skills, and score become visible.',
-    },
-    {
-      step: '3. Move stages',
-      description: 'Open strong candidates or change their stage directly from the board.',
-    },
-  ]
-
   const refreshCandidates = async () => {
     setRefreshing(true)
 
@@ -367,7 +352,7 @@ export default function JobDetailClient({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 overflow-hidden rounded-[8px] border border-slate-200 md:grid-cols-4">
           <MiniStat label="Queued" value={String(counts.queued)} />
           <MiniStat label="Processing" value={String(counts.processing)} />
           <MiniStat label="Reviewed" value={String(counts.done)} />
@@ -375,17 +360,8 @@ export default function JobDetailClient({
         </div>
       </section>
 
-      <section className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
-        {workflowCards.map((card) => (
-          <div key={card.step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-sm font-black text-slate-950">{card.step}</div>
-            <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{card.description}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="p-5">
+      <section className="mt-5">
+        <Card className="p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -427,30 +403,6 @@ export default function JobDetailClient({
             />
           </div>
         </Card>
-
-        <Card className="overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
-            <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-              How to manage this role
-            </div>
-            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-              Start with queued CVs, then review summaries and move candidates one stage at a time. AI should assist,
-              not replace the final decision.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 p-5">
-            {PIPELINE_STAGES.map((stage) => (
-              <div key={stage.id} className="rounded-[12px] border border-slate-200 bg-white p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                  {stage.shortLabel}
-                </div>
-                <div className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-                  {groupedCandidates[stage.id].length}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
@@ -470,17 +422,17 @@ export default function JobDetailClient({
                   </div>
                 </div>
 
-                <div className="min-h-[540px] rounded-[14px] border border-slate-200 bg-slate-50/80 p-3">
+                <div className="min-h-[500px] rounded-[8px] border border-slate-200 bg-white">
                   <div className="space-y-3">
                     {groupedCandidates[stage.id].length === 0 ? (
-                      <div className="rounded-[12px] border border-dashed border-slate-200 bg-white/70 p-5 text-sm font-semibold text-slate-500">
+                      <div className="p-5 text-sm font-semibold text-slate-400">
                         No candidates in this stage.
                       </div>
                     ) : (
                       groupedCandidates[stage.id].map((candidate) => (
                         <div
                           key={candidate.id}
-                          className="rounded-[12px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300"
+                          className="border-b border-slate-100 p-4 transition last:border-b-0 hover:bg-slate-50"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -502,13 +454,13 @@ export default function JobDetailClient({
                           </div>
 
                           <div className="mt-4 flex items-center gap-2">
-                            <div className={`rounded-[10px] px-3 py-2 ${getScoreTone(candidate.score)}`}>
+                            <div className={`rounded-[8px] px-3 py-2 ${getScoreTone(candidate.score)}`}>
                               <div className="text-xl font-black">{candidate.score ?? '--'}</div>
                               <div className="text-[10px] font-black uppercase tracking-[0.16em]">
                                 {getScoreLabel(candidate.score)}
                               </div>
                             </div>
-                            <div className="flex-1 rounded-[10px] bg-slate-50 px-3 py-2">
+                            <div className="flex-1 px-3 py-2">
                               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Processing
                               </div>
@@ -645,7 +597,7 @@ export default function JobDetailClient({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[12px] border border-slate-200 bg-white px-4 py-4 text-center shadow-sm">
+    <div className="border-l border-slate-200 bg-white px-4 py-2 text-center first:border-l-0">
       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
       <div className="mt-2 text-2xl font-black tracking-tight text-slate-900">{value}</div>
     </div>

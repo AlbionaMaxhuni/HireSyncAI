@@ -869,7 +869,16 @@ const supplementalTranslations: Record<string, string> = {
     'Kyçu, ngarko CV-në dhe dërgo një aplikim të thjeshtë pa pengesa shtesë.',
   'Create roles, review candidates, and keep the pipeline in one private workspace.':
     'Krijo role, shqyrto kandidatët dhe mbaje pipeline-in në një workspace privat.',
+  Apply: 'Apliko',
+  Browse: 'Shfleto',
+  'Browse roles first, then sign in only when you are ready to apply.':
+    'Shfleto rolet së pari, pastaj kyçu vetëm kur je gati të aplikosh.',
+  'Demo flow': 'Rrjedha e demos',
+  'For the final demo, this is the clean path: prepare the company, publish a role, then review candidates.':
+    'Për demon finale, kjo është rruga e pastër: përgatit kompaninë, publiko një rol, pastaj shqyrto kandidatët.',
+  'Recommended workspace flow': 'Rrjedha e rekomanduar e workspace-it',
   'Review role': 'Shqyrto rolin',
+  Track: 'Ndiq',
   'Reading job details stays public so the first step feels simple.':
     'Leximi i detajeve të pozitës mbetet publik që hapi i parë të ndihet i thjeshtë.',
   'Sign in only at the moment you want to upload your CV.':
@@ -897,6 +906,51 @@ const supplementalTranslations: Record<string, string> = {
   'Upload your CV and track the status later from your account.':
     'Ngarko CV-në dhe ndiq statusin më vonë nga llogaria jote.',
   'User session not found.': 'Sesioni i përdoruesit nuk u gjet.',
+  'A focused control room for the hiring workflow: jobs, candidates, queue health, and recent activity.':
+    'Një qendër kontrolli e fokusuar për rrjedhën e punësimit: pozita, kandidatë, shëndeti i radhës dhe aktiviteti i fundit.',
+  'Across all roles': 'Në të gjitha rolet',
+  Action: 'Veprim',
+  Actions: 'Veprimet',
+  'Active review': 'Shqyrtim aktiv',
+  'AI processing': 'Procesimi me AI',
+  All: 'Të gjitha',
+  'All profiles': 'Të gjitha profilet',
+  'All roles': 'Të gjitha rolet',
+  Company: 'Kompania',
+  'Applications will appear here once candidates apply.':
+    'Aplikimet do të shfaqen këtu pasi kandidatët të aplikojnë.',
+  Candidate: 'Kandidati',
+  'Create a role to start the hiring workflow.': 'Krijo një rol për ta nisur rrjedhën e punësimit.',
+  'Create as draft, then publish when ready.': 'Krijoje si draft, pastaj publikoje kur të jetë gati.',
+  'Create the first role to start receiving candidates.':
+    'Krijo rolin e parë për të filluar pranimin e kandidatëve.',
+  'Create, publish, and manage roles from one table-first workspace.':
+    'Krijo, publiko dhe menaxho role nga një workspace i ndërtuar rreth tabelës.',
+  'Creating...': 'Duke krijuar...',
+  Drafts: 'Draftet',
+  'Filter, compare, and open candidate profiles from one table.':
+    'Filtro, krahaso dhe hap profile kandidatësh nga një tabelë e vetme.',
+  'Filtered view': 'Pamje e filtruar',
+  'Live roles': 'Role aktive',
+  'Needs attention': 'Kërkon vëmendje',
+  'New role': 'Rol i ri',
+  'No roles match this search': 'Asnjë rol nuk përputhet me këtë kërkim',
+  'No roles yet': 'Ende nuk ka role',
+  'Not started': 'Ende pa filluar',
+  'Pipeline distribution': 'Shpërndarja e pipeline-it',
+  'Private roles': 'Role private',
+  'Recent candidates': 'Kandidatët e fundit',
+  Score: 'Pikët',
+  'Screening to final': 'Nga screening deri në finale',
+  'Search candidates': 'Kërko kandidatë',
+  'Search roles': 'Kërko role',
+  Stage: 'Faza',
+  'Total profiles': 'Profile gjithsej',
+  'Try another keyword or clear the search.': 'Provo një fjalë tjetër ose pastro kërkimin.',
+  'Try another stage, job, score, or search keyword.':
+    'Provo një fazë, pozitë, pikëzim ose fjalë kërkimi tjetër.',
+  'Visible to candidates': 'Të dukshme për kandidatët',
+  'Waiting for processing': 'Në pritje të procesimit',
 }
 
 const allTranslations: Record<string, string> = {

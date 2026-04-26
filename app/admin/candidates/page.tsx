@@ -2,17 +2,11 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Briefcase, Clock3, Search, SlidersHorizontal, Users } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 import {
-  AdminEmptyState,
-  AdminFilterBar,
   AdminPageHeader,
   AdminPill,
-  AdminSectionCard,
-  AdminStatCard,
-  AdminStatsGrid,
   adminInputClassName,
-  adminPrimaryButtonClassName,
   adminSecondaryButtonClassName,
   adminSelectClassName,
 } from '@/components/admin/AdminPrimitives'
@@ -33,12 +27,18 @@ import {
 } from '@/lib/hiring'
 import type { CandidateStage } from '@/lib/hiring'
 
+type ScoreFilter = 'all' | '80+' | '60+' | 'under60' | 'unscored'
+
+type MetricItem = {
+  label: string
+  value: string
+  hint: string
+}
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
   return 'Something went wrong.'
 }
-
-type ScoreFilter = 'all' | '80+' | '60+' | 'under60' | 'unscored'
 
 export default function AdminCandidatesPage() {
   const supabase = createClient()
@@ -115,13 +115,6 @@ export default function AdminCandidatesPage() {
     })
   }, [candidates, jobFilter, jobsById, scoreFilter, search, stageFilter])
 
-  const stageCounts = useMemo(() => {
-    return PIPELINE_STAGES.map((stage) => ({
-      ...stage,
-      count: filteredCandidates.filter((candidate) => normalizeCandidateStage(candidate.status) === stage.id).length,
-    }))
-  }, [filteredCandidates])
-
   const stats = useMemo(() => {
     const inReview = candidates.filter((candidate) => {
       const stage = normalizeCandidateStage(candidate.status)
@@ -137,30 +130,35 @@ export default function AdminCandidatesPage() {
 
     return {
       totalCandidates: candidates.length,
-      jobs: jobs.length,
       inReview,
       interviewPlus,
       queued,
     }
-  }, [candidates, jobs.length])
+  }, [candidates])
+
+  const metricItems = useMemo<MetricItem[]>(
+    () => [
+      { label: 'Candidates', value: String(stats.totalCandidates), hint: 'All profiles' },
+      { label: 'In review', value: String(stats.inReview), hint: 'Active review' },
+      { label: 'Interview+', value: String(stats.interviewPlus), hint: 'Advanced stages' },
+      { label: 'Queued', value: String(stats.queued), hint: 'AI processing' },
+    ],
+    [stats.inReview, stats.interviewPlus, stats.queued, stats.totalCandidates]
+  )
+
+  const stageTabs = useMemo(() => {
+    return [
+      { id: 'all' as const, label: 'All', count: candidates.length },
+      ...PIPELINE_STAGES.map((stage) => ({
+        id: stage.id,
+        label: stage.shortLabel,
+        count: candidates.filter((candidate) => normalizeCandidateStage(candidate.status) === stage.id).length,
+      })),
+    ]
+  }, [candidates])
 
   const hasActiveFilters =
     search.trim().length > 0 || jobFilter !== 'all' || stageFilter !== 'all' || scoreFilter !== 'all'
-
-  const workflowCards = [
-    {
-      step: '1. Filter the list',
-      description: 'Use search, job, stage, or score to narrow the pipeline fast.',
-    },
-    {
-      step: '2. Open a profile',
-      description: 'Read the AI summary, skills, red flags, and resume in one place.',
-    },
-    {
-      step: '3. Move the candidate',
-      description: 'Decide the next stage and keep the pipeline updated after each review.',
-    },
-  ]
 
   const resetFilters = () => {
     setSearch('')
@@ -176,7 +174,7 @@ export default function AdminCandidatesPage() {
       <AdminPageHeader
         eyebrow="Candidates"
         title="Candidate pipeline"
-        description="This page should be straightforward: filter the pipeline, open a profile, then move the right people forward."
+        description="Filter, compare, and open candidate profiles from one table."
         actions={
           <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
             Jobs
@@ -184,249 +182,195 @@ export default function AdminCandidatesPage() {
         }
       />
 
-      <AdminStatsGrid>
+      <MetricStrip items={metricItems} loading={loading} />
+
+      <section className="mt-5 rounded-[10px] border border-slate-200 bg-white">
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
+          {stageTabs.map((tab) => {
+            const active = stageFilter === tab.id
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStageFilter(tab.id)}
+                className={[
+                  'inline-flex items-center gap-2 rounded-[8px] px-3 py-2 text-sm font-black transition',
+                  active ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100',
+                ].join(' ')}
+              >
+                {tab.label}
+                <span className={active ? 'text-white/70' : 'text-slate-400'}>{tab.count}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 border-b border-slate-200 p-4 xl:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search candidates"
+              className={`pl-11 ${adminInputClassName}`}
+            />
+          </div>
+
+          <select
+            value={jobFilter}
+            onChange={(event) => setJobFilter(event.target.value)}
+            className={adminSelectClassName}
+          >
+            <option value="all">All jobs</option>
+            {jobs.map((job) => (
+              <option key={job.id} value={job.id}>
+                {job.title}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={scoreFilter}
+            onChange={(event) => setScoreFilter(event.target.value as ScoreFilter)}
+            className={adminSelectClassName}
+          >
+            <option value="all">All scores</option>
+            <option value="80+">80 and above</option>
+            <option value="60+">60 and above</option>
+            <option value="under60">Under 60</option>
+            <option value="unscored">Unscored</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className="inline-flex items-center justify-center rounded-[8px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
+          <span>{filteredCandidates.length} candidate(s)</span>
+          <span>{hasActiveFilters ? 'Filtered view' : 'All candidates'}</span>
+        </div>
+
         {loading ? (
-          <>
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-          </>
+          <div className="space-y-3 p-5">
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+          </div>
+        ) : filteredCandidates.length === 0 ? (
+          <EmptyTable
+            title="No candidates match the selected filters"
+            description="Try another stage, job, score, or search keyword."
+          />
         ) : (
-          <>
-            <AdminStatCard
-              label="Candidates"
-              value={String(stats.totalCandidates)}
-              hint="Every profile in the pipeline"
-              icon={Users}
-            />
-            <AdminStatCard
-              label="In review"
-              value={String(stats.inReview)}
-              hint="Screening, interview, or final"
-              icon={Clock3}
-              tone="accent"
-            />
-            <AdminStatCard
-              label="Interview+"
-              value={String(stats.interviewPlus)}
-              hint="Interview, final review, or hired"
-              icon={ArrowRight}
-              tone="success"
-            />
-            <AdminStatCard
-              label="Queued"
-              value={String(stats.queued)}
-              hint="Waiting for AI processing"
-              icon={SlidersHorizontal}
-              tone={stats.queued > 0 ? 'warning' : 'default'}
-            />
-          </>
+          <CandidatesTable candidates={filteredCandidates} jobsById={jobsById} />
         )}
-      </AdminStatsGrid>
-
-      <section className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
-        {workflowCards.map((card) => (
-          <div key={card.step} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-sm font-black text-slate-950">{card.step}</div>
-            <div className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">{card.description}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-5">
-        <AdminFilterBar>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_auto]">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, email, job, or skill"
-                className={`pl-11 ${adminInputClassName}`}
-              />
-            </div>
-
-            <select
-              value={jobFilter}
-              onChange={(event) => setJobFilter(event.target.value)}
-              className={adminSelectClassName}
-            >
-              <option value="all">All jobs</option>
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.title}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={stageFilter}
-              onChange={(event) => setStageFilter(event.target.value as 'all' | CandidateStage)}
-              className={adminSelectClassName}
-            >
-              <option value="all">All stages</option>
-              {PIPELINE_STAGES.map((stage) => (
-                <option key={stage.id} value={stage.id}>
-                  {stage.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={scoreFilter}
-              onChange={(event) => setScoreFilter(event.target.value as ScoreFilter)}
-              className={adminSelectClassName}
-            >
-              <option value="all">All scores</option>
-              <option value="80+">80 and above</option>
-              <option value="60+">60 and above</option>
-              <option value="under60">Under 60</option>
-              <option value="unscored">Unscored</option>
-            </select>
-
-            <button
-              type="button"
-              onClick={resetFilters}
-              disabled={!hasActiveFilters}
-              className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Clear filters
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <SlidersHorizontal size={14} />
-            {filteredCandidates.length} candidate(s) match the current filters
-          </div>
-        </AdminFilterBar>
-      </section>
-
-      <section className="mt-5">
-        <AdminSectionCard
-          eyebrow="Stage view"
-          title="Filtered pipeline"
-          description="The stage counts below react to the current filters so you can narrow the list without losing context."
-        >
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-            {loading
-              ? Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-24" />)
-              : stageCounts.map((stage) => (
-                  <div key={stage.id} className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2.5 w-2.5 rounded-full ${stage.dotClassName}`} />
-                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        {stage.shortLabel}
-                      </div>
-                    </div>
-                    <div className="mt-3 text-3xl font-black tracking-tight text-slate-950">{stage.count}</div>
-                  </div>
-                ))}
-          </div>
-        </AdminSectionCard>
-      </section>
-
-      <section className="mt-5">
-        <AdminSectionCard
-          eyebrow="Results"
-          title="Candidate list"
-          description="A cleaner list with the most useful information surfaced first."
-        >
-          <div className="space-y-4">
-            {loading ? (
-              <>
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-              </>
-            ) : filteredCandidates.length === 0 ? (
-              <AdminEmptyState
-                title="No candidates match the selected filters"
-                description="Try another combination of stage, job, or score filters to broaden the list."
-                action={
-                  hasActiveFilters ? (
-                    <button type="button" onClick={resetFilters} className={adminPrimaryButtonClassName}>
-                      Reset filters
-                    </button>
-                  ) : null
-                }
-              />
-            ) : (
-              filteredCandidates.map((candidate) => {
-                const stage = getStageMeta(candidate.status)
-                const job = jobsById[candidate.job_id]
-
-                return (
-                  <Link
-                    key={candidate.id}
-                    href={`/admin/candidates/${candidate.id}`}
-                    className="block rounded-[12px] border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
-                  >
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-lg font-black tracking-tight text-slate-950">
-                            {candidate.full_name || 'Unnamed candidate'}
-                          </div>
-                          <span
-                            className={`rounded-[999px] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${stage.badgeClassName}`}
-                          >
-                            {stage.label}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-4 text-sm font-semibold text-slate-500">
-                          <span>{candidate.email || 'No email available'}</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <Briefcase size={14} />
-                            {job?.title || 'Unknown job'}
-                          </span>
-                          {candidate.seniority ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <Users size={14} />
-                              {candidate.seniority}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {candidate.summary ? (
-                          <p className="mt-4 line-clamp-2 max-w-3xl text-sm font-semibold leading-relaxed text-slate-600">
-                            {candidate.summary}
-                          </p>
-                        ) : null}
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {safeArray(candidate.skills)
-                            .slice(0, 5)
-                            .map((skill) => (
-                              <AdminPill key={skill} label={skill} />
-                            ))}
-                          {candidate.processing_status === 'queued' ? (
-                            <AdminPill label="Queued" tone="warning" />
-                          ) : null}
-                          {candidate.processing_status === 'failed' ? (
-                            <AdminPill label="Failed" tone="danger" />
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className={`rounded-[10px] px-4 py-3 text-center ${getScoreTone(candidate.score)}`}>
-                          <div className="text-2xl font-black">{candidate.score ?? '--'}</div>
-                          <div className="text-[10px] font-black uppercase tracking-[0.16em]">
-                            {getScoreLabel(candidate.score)}
-                          </div>
-                        </div>
-                        <ArrowRight size={18} className="text-slate-300" />
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })
-            )}
-          </div>
-        </AdminSectionCard>
       </section>
     </AppShell>
+  )
+}
+
+function MetricStrip({ items, loading }: { items: MetricItem[]; loading: boolean }) {
+  return (
+    <section className="mt-5 rounded-[10px] border border-slate-200 bg-white">
+      <div className="grid grid-cols-2 divide-x divide-y divide-slate-200 md:grid-cols-4 md:divide-y-0">
+        {items.map((item) => (
+          <div key={item.label} className="px-5 py-4">
+            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</div>
+            {loading ? <Skeleton className="mt-3 h-8 w-20" /> : <div className="mt-2 text-3xl font-black text-slate-950">{item.value}</div>}
+            <div className="mt-1 text-sm font-semibold text-slate-500">{item.hint}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function EmptyTable({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="px-5 py-14 text-center">
+      <div className="text-base font-black text-slate-950">{title}</div>
+      <div className="mt-2 text-sm font-semibold text-slate-500">{description}</div>
+    </div>
+  )
+}
+
+function CandidatesTable({
+  candidates,
+  jobsById,
+}: {
+  candidates: CandidateRecord[]
+  jobsById: Record<string, JobRecord>
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-left">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50/70">
+            {['Candidate', 'Job', 'Stage', 'Score', 'Processing', 'Action'].map((header) => (
+              <th key={header} className="px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {candidates.map((candidate) => {
+            const stage = getStageMeta(candidate.status)
+            const job = jobsById[candidate.job_id]
+
+            return (
+              <tr key={candidate.id} className="hover:bg-slate-50">
+                <td className="max-w-[320px] px-5 py-4">
+                  <Link href={`/admin/candidates/${candidate.id}`} className="group block">
+                    <div className="flex items-center gap-2 text-sm font-black text-slate-950">
+                      <span className="truncate">{candidate.full_name || 'Unnamed candidate'}</span>
+                      <ArrowRight size={14} className="text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-600" />
+                    </div>
+                    <div className="mt-1 truncate text-xs font-semibold text-slate-500">
+                      {candidate.email || candidate.source_filename || 'No email available'}
+                    </div>
+                  </Link>
+                </td>
+                <td className="max-w-[260px] px-5 py-4 text-sm font-semibold text-slate-600">
+                  <span className="line-clamp-1">{job?.title || 'Unknown job'}</span>
+                </td>
+                <td className="px-5 py-4">
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${stage.badgeClassName}`}>
+                    {stage.label}
+                  </span>
+                </td>
+                <td className="px-5 py-4">
+                  <div className={`inline-flex min-w-16 items-center justify-center rounded-[8px] px-3 py-2 text-sm font-black ${getScoreTone(candidate.score)}`}>
+                    {candidate.score ?? '--'}
+                    <span className="ml-1 text-[10px] uppercase">{getScoreLabel(candidate.score)}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  {candidate.processing_status === 'queued' ? (
+                    <AdminPill label="Queued" tone="warning" />
+                  ) : candidate.processing_status === 'failed' ? (
+                    <AdminPill label="Failed" tone="danger" />
+                  ) : (
+                    <span className="text-sm font-semibold text-slate-500">{candidate.processing_status || 'Not started'}</span>
+                  )}
+                </td>
+                <td className="px-5 py-4">
+                  <Link href={`/admin/candidates/${candidate.id}`} className={adminSecondaryButtonClassName}>
+                    Open
+                  </Link>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }
