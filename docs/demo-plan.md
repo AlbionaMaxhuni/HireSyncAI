@@ -1,100 +1,116 @@
-# HireSync AI Demo Plan
+# Demo Plan - HireSync AI
 
-## 1. Project Summary
+## 1. Çka është projekti dhe kujt i shërben
 
-**Project:** HireSync AI  
-**What it is:** A candidate-first hiring platform with a public job portal and a private admin workspace for recruitment teams.  
-**Who it serves:** Companies and hiring teams that want a simpler way to publish jobs, receive many applications, and use AI to help screen and organize candidates faster.
+Projekti im quhet **HireSync AI**.  
+Ky është një aplikacion për hiring/rekrutim që i ndihmon kompanitë ose ekipet e HR-it me i menaxhu vendet e punës, aplikimet dhe kandidatët në një vend.
 
-**Live URL:** https://hire-sync-ai-nine.vercel.app  
-**Live status:** Verified with HTTP `200` on April 24, 2026.
+Ideja kryesore e projektit është kjo:
+- kandidati mundet me i pa pozitat e hapura dhe me apliku ma lehtë
+- admini ose kompania mundet me i menaxhu kandidatët ma mirë
+- AI përdoret si ndihmë për me i analizu CV-të dhe me e lehtësu filtrimin fillestar
 
-## 2. Main Demo Flow (5-7 Minutes)
+Ky projekt i shërben sidomos:
+- kompanive që pranojnë shumë aplikime
+- ekipeve të HR-it
+- rekruterëve që duan një mënyrë ma të organizuar për me i trajtu kandidatët
 
-### 0:00 - 0:45 | Problem and value
-- Explain the problem: companies lose time reviewing CVs manually, tracking applicants in scattered places, and moving candidates through the pipeline.
-- Present the solution: HireSync AI combines public applications, AI-assisted screening, pipeline management, analytics, and team collaboration in one workspace.
+**Live URL:** https://hire-sync-ai-nine.vercel.app
 
-### 0:45 - 1:45 | Public candidate experience
-- Open the landing page and explain the candidate-first approach.
-- Go to `/jobs` and show that open roles are public.
-- Open one published job and show the application panel.
-- Explain that candidates can browse first and sign in only when they are ready to apply.
+## 2. Flow kryesor që do ta demonstroj
 
-### 1:45 - 2:30 | Candidate follow-up view
-- Open `/applications`.
-- Show how a candidate can track application status without seeing internal admin details.
-- Point out the stage progress and processing status.
+Në demo nuk dua me i tregu krejt pjesët e projektit, por dua me u fokusu në flow-n kryesor që e shpjegon më së miri vlerën e aplikacionit.
 
-### 2:30 - 4:30 | Admin workspace core flow
-- Open `/admin` and show the dashboard overview.
-- Open `/admin/jobs` and show draft vs published jobs.
-- Open one job detail page and explain:
-  - bulk upload or manual candidate entry
-  - AI processing queue
-  - retry flow for failed processing
-  - grouped pipeline stages
-- Open `/admin/candidates` or one candidate detail page and show:
+### Hapi 1 - Landing page dhe jobs
+- Fillimisht do ta hap faqen kryesore.
+- Do të tregoj që përdoruesi mundet me i pa job-et publike.
+- Pastaj do të kaloj te faqja `/jobs` për me tregu listën e pozitave.
+
+### Hapi 2 - Aplikimi si kandidat
+- Do ta hap një pozitë të publikuar.
+- Do ta tregoj pjesën ku kandidati mundet me apliku.
+- Këtu do ta shpjegoj që kandidati nuk ka nevojë menjëherë me u futë në sistem vetëm për me i pa pozitat.
+
+### Hapi 3 - Statusi i aplikimeve
+- Pastaj do ta tregoj faqen `/applications`.
+- Këtu do të shpjegoj që kandidati mundet me e pa statusin e aplikimit të vet.
+- Kjo pjesë e bën eksperiencën më të qartë për kandidatin.
+
+### Hapi 4 - Admin workspace
+- Pastaj do të kaloj te `/admin`.
+- Do ta tregoj dashboard-in dhe faktin që admini i ka të gjitha në një vend.
+
+### Hapi 5 - Menaxhimi i job-eve
+- Te `/admin/jobs` do të tregoj si krijohen job-et.
+- Do të përmend edhe statuset si `draft` dhe `published`.
+- Kjo e tregon që job-et nuk dalin menjëherë publike pa kontroll.
+
+### Hapi 6 - Kandidatët dhe AI screening
+- Te një job i caktuar ose te `/admin/candidates` do t’i tregoj kandidatët.
+- Këtu do ta shpjegoj:
   - score
-  - skills / summary / red flags
+  - skills
+  - summary
+  - red flags
   - interview questions
-  - notes and outreach actions
+- Kjo është pjesa ku shihet përdorimi i AI-it në projekt.
 
-### 4:30 - 5:30 | Team and reporting
-- Open `/admin/team` and show workspace-based team invites.
-- Open `/admin/analytics` and show the simplified hiring metrics.
-- Explain that the app is designed for a real company workspace, not just a single-user demo.
+### Hapi 7 - Team dhe analytics
+- Në fund do të tregoj shkurt `/admin/team` dhe `/admin/analytics`.
+- Këtu do të përmend që projekti nuk është vetëm për një admin, por është menduar si sistem për kompani reale.
 
-### 5:30 - 6:30 | Short technical explanation
-- Explain that the app is built with Next.js App Router.
-- Explain that Supabase handles authentication, database, storage, and row-level security.
-- Explain that AI processing reads CV content, compares it to the job, and returns scoring and structured review data.
-- Explain that the project now uses a workspace model so jobs, candidates, notes, and team access stay scoped correctly.
+## 3. Cilat pjesë teknike do t’i shpjegoj shkurt
 
-### 6:30 - 7:00 | Close
-- Repeat the core value: less manual screening, clearer pipeline visibility, and a more professional experience for both candidates and hiring teams.
+Pjesët teknike nuk dua me i zgjat shumë, por do t’i përmend këto:
 
-## 3. Technical Parts To Explain Briefly
+- Projekti është ndërtuar me **Next.js**
+- Për databazë, auth dhe storage kam përdorur **Supabase**
+- Për analizën e CV-ve kam përdorur **AI integration**
+- Projekti i ka të ndara pjesët për kandidatë dhe admin
+- Të dhënat janë të organizuara me `workspace`, `jobs`, `candidates` dhe `notes`
 
-- Public portal and admin workspace are separated so the product is easier to understand for both user types.
-- Supabase Auth + RLS protect admin data and keep candidate access limited to their own application data.
-- Workspace tables support company/team structure instead of a fragile single-admin setup.
-- AI screening pipeline processes queued candidates and stores score, skills, summary, red flags, and interview questions.
-- Deployment is on Vercel, with the app using environment variables for Supabase, OpenRouter, and optional email delivery.
+Pra, ideja është me tregu që projekti nuk është vetëm vizual, por ka edhe logjikë reale prapa.
 
-## 4. What I Checked Before The Demo
+## 4. Çfarë kam kontrolluar para demos
 
-### Already checked
-- `README.md` updated to reflect the current version of the app.
-- `docs/demo-plan.md` prepared with a concrete presentation flow.
-- Live URL responds successfully: `https://hire-sync-ai-nine.vercel.app` returned HTTP `200` on April 24, 2026.
-- Local quality checks:
-  - `npm run lint`
-  - `npm run build`
+Para prezantimit do t’i kontrolloj këto:
 
-### To confirm again right before presenting
-- One published job exists on the live app.
-- At least one candidate application exists for the demo.
-- Admin account can sign in successfully.
-- Candidate account can sign in successfully.
-- Workspace settings show company name / website / tagline.
-- The main admin pages load without missing data states.
+- README a është i përditësuar
+- `docs/demo-plan.md` a është gati
+- live URL a punon
+- a ekziston të paktën një job i publikuar
+- a ekziston të paktën një kandidat për demo
+- a punon login për admin
+- a punon login për kandidat
+- a hapen faqet kryesore pa error
 
-## 5. Plan B If The Live Demo Fails
+Kontrollet teknike që i kam bërë:
+- `npm run lint`
+- `npm run build`
 
-1. Use the local project with `npm run dev`.
-2. Present the same flow in the same order using local data.
-3. If authentication or network is unstable, show prepared screenshots of:
-   - landing page
+## 5. Plani B nëse live demo dështon
+
+Nëse live demo nuk punon, atëherë do ta përdor këtë plan:
+
+1. Do ta hap projektin lokal me `npm run dev`
+2. Do ta tregoj të njëjtin flow në lokal
+3. Nëse ka problem me internet ose login, do të kem screenshot-e të gatshme nga:
+   - faqja kryesore
    - jobs page
    - admin dashboard
-   - candidate detail page
+   - candidates page
    - analytics page
-4. Continue explaining the architecture and value using the UI and code structure instead of waiting on the live app.
+4. Nëse duhet, do ta shpjegoj logjikën e projektit edhe përmes kodit dhe strukturës së databazës
 
-## 6. Presenter Notes
+## 6. Si dua ta prezantoj
 
-- Keep the demo focused on one strong story, not every feature.
-- Avoid spending too much time on setup details or SQL.
-- Show one public flow and one admin flow clearly.
-- When discussing AI, present it as decision support, not full automation.
+Gjatë prezantimit dua:
+- me fol qartë dhe shkurt
+- me u fokusu te pjesa kryesore e projektit
+- mos me humb në detaje të tepërta
+- me tregu qartë vlerën praktike të aplikacionit
+
+Qëllimi im është që profesori ta kuptojë:
+- çfarë problemi zgjidh projekti
+- si funksionon në praktikë
+- pse kjo ide mundet me qenë e dobishme për kompani reale
