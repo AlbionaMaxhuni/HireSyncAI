@@ -888,6 +888,10 @@ const supplementalTranslations: Record<string, string> = {
     'Një workspace modern për pozita, shqyrtim kandidatësh, screening me ndihmë të AI-së dhe bashkëpunim ekipi.',
   'Candidates continue to roles and applications.': 'Kandidatët vazhdojnë te rolet dhe aplikimet.',
   'Could not send workspace invite.': 'Nuk mund të dërgohej ftesa e workspace-it.',
+  'Email delivery is not configured. Use the email draft or copy link to send this invite manually.':
+    'Dërgimi i emailit nuk është konfiguruar. Përdor draftin e emailit ose kopjo linkun për ta dërguar ftesën manualisht.',
+  'Email sending is not configured yet. Use Open email draft or Copy link to share this invite manually.':
+    'Dërgimi i emailit ende nuk është konfiguruar. Përdor Open email draft ose Copy link për ta ndarë ftesën manualisht.',
   'Hiring Team': 'Ekipi i punësimit',
   'HireSync user': 'Përdorues HireSync',
   'not started': 'ende pa filluar',

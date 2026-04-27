@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { buildWorkspaceInviteEmail } from '@/lib/communications'
-import { sendTransactionalEmail } from '@/lib/email'
+import { isEmailDeliveryConfigured, sendTransactionalEmail } from '@/lib/email'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 import type { WorkspaceInviteRecord } from '@/lib/workspace'
 
 export const runtime = 'nodejs'
+
+const emailDeliveryNotConfiguredMessage =
+  'Email delivery is not configured. Use the email draft or copy link to send this invite manually.'
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
@@ -63,6 +66,25 @@ export async function POST(req: Request) {
     inviterName: user.email || workspace?.name || 'HireSync workspace',
   })
 
+  if (!isEmailDeliveryConfigured()) {
+    const { data: updatedInvite } = await supabase
+      .from('workspace_invites')
+      .update({
+        last_send_error: emailDeliveryNotConfiguredMessage,
+      })
+      .eq('id', invite.id)
+      .select('*')
+      .single()
+
+    return NextResponse.json(
+      {
+        error: emailDeliveryNotConfiguredMessage,
+        invite: (updatedInvite as WorkspaceInviteRecord | null) ?? invite,
+      },
+      { status: 503 }
+    )
+  }
+
   try {
     const sent = await sendTransactionalEmail({
       to: invite.email,
@@ -91,13 +113,25 @@ export async function POST(req: Request) {
       invite: updatedInvite as WorkspaceInviteRecord,
     })
   } catch (error: unknown) {
-    await supabase
+    const safeErrorMessage = getErrorMessage(error).includes('RESEND_') || getErrorMessage(error).includes('EMAIL_FROM')
+      ? emailDeliveryNotConfiguredMessage
+      : getErrorMessage(error)
+
+    const { data: updatedInvite } = await supabase
       .from('workspace_invites')
       .update({
-        last_send_error: getErrorMessage(error),
+        last_send_error: safeErrorMessage,
       })
       .eq('id', invite.id)
+      .select('*')
+      .single()
 
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: safeErrorMessage,
+        invite: (updatedInvite as WorkspaceInviteRecord | null) ?? invite,
+      },
+      { status: 500 }
+    )
   }
 }

@@ -39,6 +39,16 @@ function getErrorMessage(error: unknown) {
   return 'Something went wrong.'
 }
 
+function getInviteSendErrorMessage(value: string | null | undefined) {
+  if (!value) return ''
+
+  if (value.includes('RESEND_') || value.includes('EMAIL_FROM') || value.includes('Email delivery is not configured')) {
+    return 'Email sending is not configured yet. Use Open email draft or Copy link to share this invite manually.'
+  }
+
+  return value
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return 'Not available'
   return new Date(value).toLocaleDateString()
@@ -249,6 +259,11 @@ export default function AdminTeamPage() {
       } | null
 
       if (!response.ok) {
+        if (payload?.invite) {
+          setInvites((previous) =>
+            previous.map((invite) => (invite.id === inviteId ? (payload.invite as WorkspaceInviteRecord) : invite))
+          )
+        }
         throw new Error(payload?.error ?? 'Could not send workspace invite.')
       }
 
@@ -260,7 +275,7 @@ export default function AdminTeamPage() {
 
       setToast({ open: true, type: 'success', message: 'Workspace invite email sent successfully.' })
     } catch (error: unknown) {
-      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+      setToast({ open: true, type: 'error', message: getInviteSendErrorMessage(getErrorMessage(error)) })
     } finally {
       setSendingInviteId(null)
     }
@@ -484,7 +499,9 @@ export default function AdminTeamPage() {
                           </div>
                         ) : null}
                         {invite.last_send_error ? (
-                          <div className="mt-2 text-xs font-semibold text-rose-700">{invite.last_send_error}</div>
+                          <div className="mt-2 text-xs font-semibold text-amber-700">
+                            {getInviteSendErrorMessage(invite.last_send_error)}
+                          </div>
                         ) : null}
                         <div className="mt-4 break-all rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
                           {inviteLink}
