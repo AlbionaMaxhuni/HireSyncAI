@@ -1,88 +1,79 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getServerUserRole } from '@/lib/server-auth'
+import { analyzeCandidateForRole } from '@/lib/ai'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { checkWorkspaceCapacity, recordUsageEvent } from '@/lib/saas'
+import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
 
+function cleanText(value: unknown, maxLength: number) {
+  return String(value ?? '').trim().slice(0, maxLength)
+}
+
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { user, role, workspace, supabase } = await getOptionalServerUserWithRole()
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const role = await getServerUserRole(user)
-  if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  if (!process.env.OPENROUTER_API_KEY) return NextResponse.json({ error: 'API Key missing' }, { status: 500 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (role !== 'admin' || !workspace?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const body = await req.json().catch(() => null)
-  const { jobTitle, jobDescription, resumeText, candidateName = 'Candidate' } = body || {}
-
-  if (!jobTitle || !jobDescription || !resumeText) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-  }
-
-  const systemPrompt = `
-    You are an expert AI Talent Auditor for a high-end recruitment agency.
-    Analyze the resume against the job description and return a detailed, professional JSON.
-
-    REQUIRED JSON FORMAT (STRICT):
-    {
-      "score": number (0-100),
-      "seniority": "Intern" | "Junior" | "Mid" | "Senior" | "Lead",
-      "status_suggestion": "screening" | "interview" | "rejected",
-      "summary": "A 2-sentence professional overview of why they match or fail.",
-      "skills": ["Skill1", "Skill2", "Skill3"],
-      "red_flags": ["Concern1", "Concern2"],
-      "interview_questions": ["Question1", "Question2"]
-    }
-
-    RULES:
-    1. If resume is poor quality or fake, score < 20 and status_suggestion: "rejected".
-    2. Be critical. Only 90+ scores for perfect matches.
-    3. Extract exactly 5-8 key technical skills.
-  `;
-
-  const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://hiresyncai.vercel.app', // Për OpenRouter rankings
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini', // Modeli më i mirë për çmim/performancë
-      temperature: 0.1, // E mbajmë ulët për rezultate konsistente
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { 
-          role: 'user', 
-          content: `JOB: ${jobTitle}\nJD: ${jobDescription}\n\nCANDIDATE: ${candidateName}\nRESUME: ${resumeText}` 
-        },
-      ],
-      response_format: { type: "json_object" } // Siguron që del vetëm JSON
-    }),
+  const limit = checkRateLimit(rateLimitKey(req, 'ai:analyze', user.id), {
+    limit: 40,
+    windowMs: 60 * 60 * 1000,
   })
 
-  if (!upstream.ok) {
-    const err = await upstream.text()
-    return NextResponse.json({ error: `AI Provider Error: ${err}` }, { status: 502 })
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many AI requests. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(limit) }
+    )
   }
 
-  // Shënim: E hoqëm 'stream: true' sepse për JSON të strukturuar 
-  // është më mirë të marrim objektin e plotë që ta ruajmë në DB.
-  const aiResponse = await upstream.json()
-  const analysis = JSON.parse(aiResponse.choices[0].message.content)
+  const body = (await req.json().catch(() => null)) as {
+    jobTitle?: string
+    jobDescription?: string
+    resumeText?: string
+    candidateName?: string
+  } | null
 
-  return NextResponse.json(analysis)
+  const jobTitle = cleanText(body?.jobTitle, 160)
+  const jobDescription = cleanText(body?.jobDescription, 12000)
+  const resumeText = cleanText(body?.resumeText, 60000)
+  const candidateName = cleanText(body?.candidateName || 'Candidate', 160)
+
+  if (!jobTitle || !jobDescription || !resumeText) {
+    return NextResponse.json({ error: 'Job title, job description, and resume text are required.' }, { status: 400 })
+  }
+
+  const capacity = await checkWorkspaceCapacity({
+    supabase,
+    workspaceId: workspace.id,
+    feature: 'aiScreenings',
+  })
+
+  if (!capacity.ok) {
+    return NextResponse.json({ error: capacity.message }, { status: 402 })
+  }
+
+  try {
+    const analysis = await analyzeCandidateForRole({
+      jobTitle,
+      jobDescription,
+      resumeText,
+      candidateName,
+    })
+
+    await recordUsageEvent(supabase, {
+      workspaceId: workspace.id,
+      userId: user.id,
+      feature: 'aiScreenings',
+      metadata: {
+        source: 'manual-candidate-analysis',
+      },
+    })
+
+    return NextResponse.json(analysis)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'AI analysis failed.'
+    return NextResponse.json({ error: message }, { status: 502 })
+  }
 }

@@ -1,15 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { analyzeCandidateForRole } from '@/lib/ai'
 import { parseResume } from '@/lib/resume/parseResume'
-
-type AiJson = {
-  score: number
-  seniority: string
-  status_suggestion: 'screening' | 'interview' | 'rejected'
-  summary: string
-  skills: string[]
-  red_flags: string[]
-  interview_questions: string[]
-}
+import { recordUsageEvent } from '@/lib/saas'
 
 type ProcessingJob = {
   id: string
@@ -21,6 +13,7 @@ type ProcessingCandidate = {
   id: string
   resume_file_path: string | null
   source_filename: string | null
+  workspace_id?: string | null
 }
 
 export type CandidateBatchProcessingResult = {
@@ -34,82 +27,8 @@ function getErrorMessage(error: unknown) {
   return 'Unknown processing error'
 }
 
-function safeParseAiJson(text: string): AiJson | null {
-  try {
-    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned) as Partial<AiJson>
-
-    return {
-      score: Math.max(1, Math.min(100, Math.round(parsed.score ?? 0))),
-      seniority: String(parsed.seniority ?? 'Junior'),
-      status_suggestion:
-        parsed.status_suggestion === 'interview' || parsed.status_suggestion === 'rejected'
-          ? parsed.status_suggestion
-          : 'screening',
-      summary: String(parsed.summary ?? ''),
-      skills: Array.isArray(parsed.skills) ? parsed.skills.map(String) : [],
-      red_flags: Array.isArray(parsed.red_flags) ? parsed.red_flags.map(String) : [],
-      interview_questions: Array.isArray(parsed.interview_questions)
-        ? parsed.interview_questions.map(String)
-        : [],
-    }
-  } catch {
-    return null
-  }
-}
-
 export async function aiAnalyze(jobTitle: string, jobDescription: string, resumeText: string) {
-  if (!process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY missing')
-
-  const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      temperature: 0.1,
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert AI recruiter. Return ONLY valid JSON.
-Schema:
-{
-  "score": number,
-  "seniority": "Intern"|"Junior"|"Mid"|"Senior"|"Lead",
-  "status_suggestion": "screening"|"interview"|"rejected",
-  "summary": "2 sentence summary with strengths and gaps",
-  "skills": string[],
-  "red_flags": string[],
-  "interview_questions": string[]
-}`,
-        },
-        {
-          role: 'user',
-          content: `Analyze this resume for the ${jobTitle} role.\nJob description: ${jobDescription}\nResume: ${resumeText}`,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    }),
-  })
-
-  if (!upstream.ok) {
-    const errorText = await upstream.text().catch(() => '')
-    throw new Error(errorText || `AI provider returned ${upstream.status}`)
-  }
-
-  const json = (await upstream.json()) as {
-    choices?: Array<{ message?: { content?: string } }>
-  }
-
-  const text = json.choices?.[0]?.message?.content
-  if (!text) throw new Error('AI provider returned an empty response')
-
-  const parsed = safeParseAiJson(text)
-  if (!parsed) throw new Error('Could not parse AI JSON response')
-
-  return parsed
+  return analyzeCandidateForRole({ jobTitle, jobDescription, resumeText })
 }
 
 export async function processCandidateBatch({
@@ -166,6 +85,17 @@ export async function processCandidateBatch({
         .eq('id', candidate.id)
 
       if (updateError) throw updateError
+
+      await recordUsageEvent(supabaseAdmin, {
+        workspaceId: candidate.workspace_id,
+        feature: 'aiScreenings',
+        quantity: 1,
+        metadata: {
+          candidateId: candidate.id,
+          jobId: job.id,
+          source: 'candidate-processing',
+        },
+      })
 
       processed += 1
       processedCandidateIds.push(candidate.id)

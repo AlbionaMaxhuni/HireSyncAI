@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowUpRight, Copy, Loader2, Mail, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { ArrowUpRight, Copy, Loader2, Mail, Trash2, UserPlus } from 'lucide-react'
 import {
   AdminEmptyState,
   AdminPageHeader,
   AdminPill,
   AdminSectionCard,
-  AdminStatCard,
-  AdminStatsGrid,
   adminDangerButtonClassName,
   adminInputClassName,
   adminPrimaryButtonClassName,
@@ -39,11 +37,32 @@ function getErrorMessage(error: unknown) {
   return 'Something went wrong.'
 }
 
+function isEmailDeliveryConfigError(value: string | null | undefined) {
+  if (!value) return false
+
+  return (
+    value.includes('RESEND_') ||
+    value.includes('EMAIL_FROM') ||
+    value.includes('Email delivery is not configured') ||
+    value.includes('Email sending is not configured')
+  )
+}
+
+function SummaryItem({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div>
+      <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
+      <div className="mt-1 text-2xl font-black tracking-tight text-slate-950">{value}</div>
+      <div className="mt-1 text-sm font-semibold text-slate-500">{hint}</div>
+    </div>
+  )
+}
+
 function getInviteSendErrorMessage(value: string | null | undefined) {
   if (!value) return ''
 
-  if (value.includes('RESEND_') || value.includes('EMAIL_FROM') || value.includes('Email delivery is not configured')) {
-    return 'Email sending is not configured yet. Use Open email draft or Copy link to share this invite manually.'
+  if (isEmailDeliveryConfigError(value)) {
+    return ''
   }
 
   return value
@@ -52,10 +71,6 @@ function getInviteSendErrorMessage(value: string | null | undefined) {
 function formatDate(value: string | null | undefined) {
   if (!value) return 'Not available'
   return new Date(value).toLocaleDateString()
-}
-
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase()
 }
 
 export default function AdminTeamPage() {
@@ -161,28 +176,32 @@ export default function AdminTeamPage() {
     []
   )
 
+  const buildInviteDraft = (invite: WorkspaceInviteRecord) => {
+    const inviteLink = typeof window === 'undefined' ? '' : inviteLinkBuilder(invite.invite_code)
+
+    return buildWorkspaceInviteEmail({
+      workspaceName: workspace?.name || 'HireSync workspace',
+      inviteLink,
+      inviterName: user?.email || workspace?.name || 'HireSync workspace',
+    })
+  }
+
+  const getInviteMailto = (invite: WorkspaceInviteRecord) => {
+    const draft = buildInviteDraft(invite)
+    return buildMailtoHref(invite.email, draft.subject, draft.body)
+  }
+
+  const openInviteEmailDraft = (invite: WorkspaceInviteRecord) => {
+    if (typeof window === 'undefined') return
+    window.location.href = getInviteMailto(invite)
+  }
+
   const copyInviteLink = async (inviteCode: string) => {
     try {
       await navigator.clipboard.writeText(inviteLinkBuilder(inviteCode))
       setToast({ open: true, type: 'success', message: 'Invite link copied.' })
     } catch {
       setToast({ open: true, type: 'error', message: 'Could not copy invite link.' })
-    }
-  }
-
-  const copyInviteMessage = async (invite: WorkspaceInviteRecord) => {
-    try {
-      const inviteLink = inviteLinkBuilder(invite.invite_code)
-      const draft = buildWorkspaceInviteEmail({
-        workspaceName: workspace?.name || 'HireSync workspace',
-        inviteLink,
-        inviterName: user?.email || workspace?.name || 'HireSync workspace',
-      })
-
-      await navigator.clipboard.writeText(`Subject: ${draft.subject}\n\n${draft.body}`)
-      setToast({ open: true, type: 'success', message: 'Invite email copied.' })
-    } catch {
-      setToast({ open: true, type: 'error', message: 'Could not copy invite email.' })
     }
   }
 
@@ -194,31 +213,30 @@ export default function AdminTeamPage() {
     setCreatingInvite(true)
 
     try {
-      const inviteCode = crypto.randomUUID()
-      const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
-
-      const { data, error } = await supabase
-        .from('workspace_invites')
-        .insert({
-          workspace_id: workspace.id,
-          email: normalizeEmail(inviteEmail),
+      const response = await fetch('/api/workspace/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
           role: inviteRole,
-          invite_code: inviteCode,
-          invited_by: user.id,
-          expires_at: expiresAt,
-        })
-        .select('*')
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      const payload = (await response.json().catch(() => null)) as {
+        invite?: WorkspaceInviteRecord
+        error?: string
+      } | null
 
-      const nextInvite = data as WorkspaceInviteRecord
-      setInvites((previous) => [nextInvite, ...previous])
+      if (!response.ok || !payload?.invite) {
+        throw new Error(payload?.error ?? 'Could not create invite.')
+      }
+
+      setInvites((previous) => [payload.invite as WorkspaceInviteRecord, ...previous])
       setInviteEmail('')
       setToast({
         open: true,
         type: 'success',
-        message: 'Invite created. Copy the link below and share it with your teammate.',
+        message: 'Invite created. Send the email or copy the invite link from the access list.',
       })
     } catch (error: unknown) {
       setToast({ open: true, type: 'error', message: getErrorMessage(error) })
@@ -231,8 +249,15 @@ export default function AdminTeamPage() {
     setRemovingInviteId(inviteId)
 
     try {
-      const { error } = await supabase.from('workspace_invites').delete().eq('id', inviteId)
-      if (error) throw error
+      const response = await fetch(`/api/workspace/invites/${inviteId}`, {
+        method: 'DELETE',
+      })
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Could not cancel invite.')
+      }
 
       setInvites((previous) => previous.filter((invite) => invite.id !== inviteId))
       setToast({ open: true, type: 'success', message: 'Invite revoked.' })
@@ -243,14 +268,14 @@ export default function AdminTeamPage() {
     }
   }
 
-  const sendInviteEmail = async (inviteId: string) => {
-    setSendingInviteId(inviteId)
+  const sendInviteEmail = async (invite: WorkspaceInviteRecord) => {
+    setSendingInviteId(invite.id)
 
     try {
       const response = await fetch('/api/communications/workspace-invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteId }),
+        body: JSON.stringify({ inviteId: invite.id }),
       })
 
       const payload = (await response.json().catch(() => null)) as {
@@ -258,24 +283,37 @@ export default function AdminTeamPage() {
         invite?: WorkspaceInviteRecord
       } | null
 
-      if (!response.ok) {
-        if (payload?.invite) {
-          setInvites((previous) =>
-            previous.map((invite) => (invite.id === inviteId ? (payload.invite as WorkspaceInviteRecord) : invite))
-          )
-        }
-        throw new Error(payload?.error ?? 'Could not send workspace invite.')
-      }
-
       if (payload?.invite) {
         setInvites((previous) =>
-          previous.map((invite) => (invite.id === inviteId ? (payload.invite as WorkspaceInviteRecord) : invite))
+          previous.map((existingInvite) =>
+            existingInvite.id === payload.invite?.id ? (payload.invite as WorkspaceInviteRecord) : existingInvite
+          )
         )
+      }
+
+      if (!response.ok) {
+        const errorMessage = payload?.error ?? 'Could not send workspace invite.'
+
+        if (isEmailDeliveryConfigError(errorMessage)) {
+          openInviteEmailDraft(payload?.invite ?? invite)
+          setToast({
+            open: true,
+            type: 'success',
+            message: 'Email draft opened. Send it from your email client to share the invite.',
+          })
+          return
+        }
+
+        throw new Error(errorMessage)
       }
 
       setToast({ open: true, type: 'success', message: 'Workspace invite email sent successfully.' })
     } catch (error: unknown) {
-      setToast({ open: true, type: 'error', message: getInviteSendErrorMessage(getErrorMessage(error)) })
+      setToast({
+        open: true,
+        type: 'error',
+        message: getInviteSendErrorMessage(getErrorMessage(error)) || 'Could not send workspace invite.',
+      })
     } finally {
       setSendingInviteId(null)
     }
@@ -331,231 +369,188 @@ export default function AdminTeamPage() {
         }
       />
 
-      <AdminStatsGrid>
-        {loading ? (
-          <>
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-          </>
-        ) : (
-          <>
-            <AdminStatCard label="Workspace" value={workspace?.name || 'Workspace'} hint="Current hiring team" icon={ShieldCheck} />
-            <AdminStatCard label="Members" value={String(members.length)} hint="Active admins in this workspace" icon={Users} tone="accent" />
-            <AdminStatCard label="Pending invites" value={String(invites.length)} hint="Invite links not accepted yet" icon={Mail} tone="warning" />
-            <AdminStatCard label="Invite flow" value="Link-based" hint="Manual share until email delivery is connected" icon={UserPlus} tone="success" />
-          </>
-        )}
-      </AdminStatsGrid>
-
-      <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <AdminSectionCard
-          eyebrow="Invite"
-          title="Add a teammate"
-          description="Create a secure invite link for a recruiter and share it manually. This keeps the app usable now, even before full email automation is connected."
-        >
-          {authLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-            </div>
+      <section className="mt-5 border-y border-slate-200 py-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {loading ? (
+            <>
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </>
           ) : (
-            <form onSubmit={createInvite} className="space-y-4">
-              <div>
-                <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Workspace</label>
-                <div className="mt-2 rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                  {workspace?.name || 'Workspace not available yet'}
-                </div>
-              </div>
+            <>
+              <SummaryItem label="Workspace" value={workspace?.name || 'Workspace'} hint="Current hiring team" />
+              <SummaryItem label="Active members" value={String(members.length)} hint="People with access" />
+              <SummaryItem label="Pending invites" value={String(invites.length)} hint="Waiting to join" />
+            </>
+          )}
+        </div>
+      </section>
 
-              <div>
-                <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Teammate email</label>
-                <input
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                  placeholder="recruiter@company.com"
-                  className={`mt-2 ${adminInputClassName}`}
-                />
-              </div>
+      <AdminSectionCard
+        eyebrow="Invite"
+        title="Invite teammate"
+        description="Add the email address, create the invite, then send it from the access list."
+        className="mt-5"
+      >
+        {authLoading ? (
+          <Skeleton className="h-20" />
+        ) : (
+          <form onSubmit={createInvite} className="grid gap-3 lg:grid-cols-[1fr_180px_auto]">
+            <div>
+              <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Teammate email</label>
+              <input
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+                placeholder="recruiter@company.com"
+                className={`mt-2 ${adminInputClassName}`}
+              />
+            </div>
 
-              <div>
-                <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Access role</label>
-                <select
-                  value={inviteRole}
-                  onChange={(event) => setInviteRole(event.target.value as 'recruiter')}
-                  className={`mt-2 ${adminSelectClassName}`}
-                >
-                  <option value="recruiter">Recruiter</option>
-                </select>
-              </div>
+            <div>
+              <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Role</label>
+              <select
+                value={inviteRole}
+                onChange={(event) => setInviteRole(event.target.value as 'recruiter')}
+                className={`mt-2 w-full ${adminSelectClassName}`}
+              >
+                <option value="recruiter">Recruiter</option>
+              </select>
+            </div>
 
+            <div className="flex items-end">
               <button
                 type="submit"
                 disabled={creatingInvite || !canCreateInvite}
-                className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminPrimaryButtonClassName}`}
+                className={`w-full disabled:cursor-not-allowed disabled:opacity-50 ${adminPrimaryButtonClassName}`}
               >
-                <UserPlus size={16} />
-                {creatingInvite ? 'Creating invite...' : 'Create invite'}
+                {creatingInvite ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                {creatingInvite ? 'Creating...' : 'Create invite'}
               </button>
-            </form>
-          )}
-        </AdminSectionCard>
+            </div>
+          </form>
+        )}
+      </AdminSectionCard>
 
-        <AdminSectionCard
-          eyebrow="People"
-          title="Current workspace members"
-          description="Everyone with active access to jobs, candidates, notes, and analytics in this workspace."
-        >
+      <AdminSectionCard
+        eyebrow="Access"
+        title="Members and invites"
+        description="Active teammates and pending invite links stay in one clean list."
+        className="mt-5"
+      >
+        {loading ? (
           <div className="space-y-3">
-            {loading ? (
-              <>
-                <Skeleton className="h-24" />
-                <Skeleton className="h-24" />
-                <Skeleton className="h-24" />
-              </>
-            ) : members.length === 0 ? (
-              <AdminEmptyState
-                title="No members yet"
-                description="Create the first invite to turn this into a shared hiring workspace."
-              />
-            ) : (
-              members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex flex-col gap-4 rounded-[12px] border border-slate-200 bg-white p-5 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="truncate text-lg font-black text-slate-950">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
+        ) : members.length === 0 && invites.length === 0 ? (
+          <AdminEmptyState
+            title="No access records yet"
+            description="Create the first invite to turn this into a shared hiring workspace."
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-[10px] border border-slate-200 bg-white">
+            <table className="min-w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70">
+                  {['Person', 'Role', 'Status', 'Date', 'Actions'].map((header) => (
+                    <th key={header} className="px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {members.map((member) => (
+                  <tr key={member.id} className="hover:bg-slate-50">
+                    <td className="max-w-[360px] px-5 py-4">
+                      <div className="truncate text-sm font-black text-slate-950">
                         {member.full_name || member.email || 'Unnamed team member'}
                       </div>
+                      <div className="mt-1 truncate text-xs font-semibold text-slate-500">{member.email || 'No email stored'}</div>
+                    </td>
+                    <td className="px-5 py-4">
                       <AdminPill label={formatWorkspaceRole(member.role)} tone={member.role === 'owner' ? 'success' : 'accent'} />
-                    </div>
-                    <div className="mt-2 text-sm font-semibold text-slate-500">{member.email || 'No email stored'}</div>
-                    <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Joined {formatDate(member.joined_at)}
-                    </div>
-                  </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <AdminPill label="Active" tone="success" />
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-500">Joined {formatDate(member.joined_at)}</td>
+                    <td className="px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => removeMember(member)}
+                        disabled={removingMemberId === member.id || member.role === 'owner' || member.user_id === user?.id}
+                        className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminDangerButtonClassName}`}
+                      >
+                        <Trash2 size={16} />
+                        {removingMemberId === member.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
 
-                  <button
-                    type="button"
-                    onClick={() => removeMember(member)}
-                    disabled={removingMemberId === member.id || member.role === 'owner' || member.user_id === user?.id}
-                    className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminDangerButtonClassName}`}
-                  >
-                    <Trash2 size={16} />
-                    {removingMemberId === member.id ? 'Removing...' : 'Remove'}
-                  </button>
-                </div>
-              ))
-            )}
+                {invites.map((invite) => {
+                  const inviteSendError = getInviteSendErrorMessage(invite.last_send_error)
+
+                  return (
+                    <tr key={invite.id} className="hover:bg-slate-50">
+                      <td className="max-w-[360px] px-5 py-4">
+                        <div className="truncate text-sm font-black text-slate-950">{invite.email}</div>
+                        {inviteSendError ? (
+                          <div className="mt-1 text-xs font-semibold text-amber-700">{inviteSendError}</div>
+                        ) : invite.last_sent_at ? (
+                          <div className="mt-1 text-xs font-semibold text-emerald-700">Last sent {formatDate(invite.last_sent_at)}</div>
+                        ) : (
+                          <div className="mt-1 text-xs font-semibold text-slate-500">Invite link ready</div>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <AdminPill label={formatWorkspaceRole(invite.role)} tone="accent" />
+                      </td>
+                      <td className="px-5 py-4">
+                        <AdminPill label="Pending" tone="warning" />
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-500">Expires {formatDate(invite.expires_at)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => sendInviteEmail(invite)}
+                            disabled={sendingInviteId === invite.id}
+                            className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminPrimaryButtonClassName}`}
+                          >
+                            {sendingInviteId === invite.id ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                            {sendingInviteId === invite.id ? 'Sending...' : 'Send email'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyInviteLink(invite.invite_code)}
+                            className={adminSecondaryButtonClassName}
+                          >
+                            <Copy size={16} />
+                            Copy link
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => revokeInvite(invite.id)}
+                            disabled={removingInviteId === invite.id}
+                            className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminDangerButtonClassName}`}
+                          >
+                            <Trash2 size={16} />
+                            {removingInviteId === invite.id ? 'Canceling...' : 'Cancel'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
-        </AdminSectionCard>
-      </section>
-
-      <section className="mt-5">
-        <AdminSectionCard
-          eyebrow="Pending"
-          title="Open invite links"
-          description="These links remain valid until they are accepted or revoked."
-        >
-          <div className="space-y-3">
-            {loading ? (
-              <>
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-              </>
-            ) : invites.length === 0 ? (
-              <AdminEmptyState
-                title="No pending invites"
-                description="When you create invite links, they will appear here with copy and revoke actions."
-              />
-            ) : (
-              invites.map((invite) => {
-                const inviteLink = typeof window === 'undefined' ? '' : inviteLinkBuilder(invite.invite_code)
-                const inviteDraft = buildWorkspaceInviteEmail({
-                  workspaceName: workspace?.name || 'HireSync workspace',
-                  inviteLink,
-                  inviterName: user?.email || workspace?.name || 'HireSync workspace',
-                })
-                const inviteMailto = buildMailtoHref(invite.email, inviteDraft.subject, inviteDraft.body)
-
-                return (
-                  <div key={invite.id} className="rounded-[12px] border border-slate-200 bg-slate-50 p-5">
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="text-lg font-black text-slate-950">{invite.email}</div>
-                          <AdminPill label={formatWorkspaceRole(invite.role)} tone="accent" />
-                        </div>
-                        <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          Expires {formatDate(invite.expires_at)}
-                        </div>
-                        {invite.last_sent_at ? (
-                          <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                            Last sent {formatDate(invite.last_sent_at)}
-                          </div>
-                        ) : null}
-                        {invite.last_send_error ? (
-                          <div className="mt-2 text-xs font-semibold text-amber-700">
-                            {getInviteSendErrorMessage(invite.last_send_error)}
-                          </div>
-                        ) : null}
-                        <div className="mt-4 break-all rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
-                          {inviteLink}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => sendInviteEmail(invite.id)}
-                          disabled={sendingInviteId === invite.id}
-                          className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminPrimaryButtonClassName}`}
-                        >
-                          {sendingInviteId === invite.id ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                          {sendingInviteId === invite.id ? 'Sending...' : 'Send invite'}
-                        </button>
-                        <Link href={inviteMailto} className={adminSecondaryButtonClassName}>
-                          <Mail size={16} />
-                          Open email draft
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => copyInviteLink(invite.invite_code)}
-                          className={adminSecondaryButtonClassName}
-                        >
-                          <Copy size={16} />
-                          Copy link
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => copyInviteMessage(invite)}
-                          className={adminSecondaryButtonClassName}
-                        >
-                          <Copy size={16} />
-                          Copy email
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => revokeInvite(invite.id)}
-                          disabled={removingInviteId === invite.id}
-                          className={`disabled:cursor-not-allowed disabled:opacity-50 ${adminDangerButtonClassName}`}
-                        >
-                          <Trash2 size={16} />
-                          {removingInviteId === invite.id ? 'Revoking...' : 'Revoke'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </AdminSectionCard>
-      </section>
+        )}
+      </AdminSectionCard>
     </AppShell>
   )
 }

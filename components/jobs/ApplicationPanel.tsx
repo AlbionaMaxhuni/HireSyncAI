@@ -30,6 +30,7 @@ export default function ApplicationPanel({
   const [location, setLocation] = useState('')
   const [note, setNote] = useState('')
   const [resume, setResume] = useState<File | null>(null)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(hasApplied)
   const [error, setError] = useState('')
@@ -60,6 +61,11 @@ export default function ApplicationPanel({
       return
     }
 
+    if (!privacyAccepted) {
+      setError('Please accept the privacy notice before submitting.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
 
@@ -70,6 +76,7 @@ export default function ApplicationPanel({
       formData.append('email', email.trim())
       formData.append('location', location.trim())
       formData.append('note', note.trim())
+      formData.append('privacyAccepted', privacyAccepted ? '1' : '0')
       formData.append('resume', resume)
 
       const response = await fetch('/api/applications', {
@@ -87,6 +94,7 @@ export default function ApplicationPanel({
       setJobTitle(payload?.jobTitle ?? '')
       setResume(null)
       setNote('')
+      setPrivacyAccepted(false)
     } catch (submissionError: unknown) {
       setError(getErrorMessage(submissionError))
     } finally {
@@ -239,9 +247,27 @@ export default function ApplicationPanel({
             </label>
           </div>
 
+          <label className="flex items-start gap-3 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-600">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(event) => setPrivacyAccepted(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300"
+              required
+            />
+            <span>
+              I agree that my CV and application data can be processed for this hiring process. I can request
+              deletion of my data according to the{' '}
+              <Link href="/privacy" className="font-black text-slate-950 underline underline-offset-2">
+                privacy policy
+              </Link>
+              .
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !privacyAccepted}
             className="inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}

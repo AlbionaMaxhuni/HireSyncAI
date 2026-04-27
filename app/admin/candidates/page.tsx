@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
 import {
   AdminPageHeader,
@@ -174,7 +174,7 @@ export default function AdminCandidatesPage() {
       <AdminPageHeader
         eyebrow="Candidates"
         title="Candidate pipeline"
-        description="Filter, compare, and open candidate profiles from one table."
+        description="Filter by stage, compare scores, and open the right profile faster."
         actions={
           <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
             Jobs
@@ -212,7 +212,7 @@ export default function AdminCandidatesPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search candidates"
+              placeholder="Search name, email, role, or skill"
               className={`pl-11 ${adminInputClassName}`}
             />
           </div>
@@ -263,6 +263,16 @@ export default function AdminCandidatesPage() {
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
           </div>
+        ) : candidates.length === 0 ? (
+          <EmptyTable
+            title="No candidates yet"
+            description="Published roles will collect applications here."
+            action={
+              <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
+                Open jobs
+              </Link>
+            }
+          />
         ) : filteredCandidates.length === 0 ? (
           <EmptyTable
             title="No candidates match the selected filters"
@@ -292,11 +302,12 @@ function MetricStrip({ items, loading }: { items: MetricItem[]; loading: boolean
   )
 }
 
-function EmptyTable({ title, description }: { title: string; description: string }) {
+function EmptyTable({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
   return (
     <div className="px-5 py-14 text-center">
       <div className="text-base font-black text-slate-950">{title}</div>
       <div className="mt-2 text-sm font-semibold text-slate-500">{description}</div>
+      {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
     </div>
   )
 }

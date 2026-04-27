@@ -104,10 +104,22 @@ export default function AdminCandidateProfilePage() {
     setUpdatingStage(true)
 
     try {
-      const { error } = await supabase.from('candidates').update({ status: stage }).eq('id', candidate.id)
-      if (error) throw error
+      const response = await fetch(`/api/candidates/${candidate.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: stage }),
+      })
 
-      setCandidate({ ...candidate, status: stage })
+      const payload = (await response.json().catch(() => null)) as {
+        candidate?: CandidateProfile
+        error?: string
+      } | null
+
+      if (!response.ok || !payload?.candidate) {
+        throw new Error(payload?.error ?? 'Could not update candidate stage.')
+      }
+
+      setCandidate(payload.candidate as CandidateProfile)
       setEmailTemplateStage(stage)
       setToast({ open: true, type: 'success', message: `Candidate moved to ${stage}.` })
     } catch (error: unknown) {
@@ -266,6 +278,16 @@ export default function AdminCandidateProfilePage() {
       } | null
 
       if (!response.ok) {
+        if (payload?.error?.includes('Email delivery is not configured') && candidateEmailHref) {
+          window.location.href = candidateEmailHref
+          setToast({
+            open: true,
+            type: 'success',
+            message: 'Email draft opened. Send it from your email client to share the update.',
+          })
+          return
+        }
+
         throw new Error(payload?.error ?? 'Could not send candidate email.')
       }
 

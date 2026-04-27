@@ -34,6 +34,13 @@ type MetricItem = {
   hint: string
 }
 
+type NextStep = {
+  title: string
+  description: string
+  href: string
+  label: string
+}
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
   return 'Something went wrong.'
@@ -163,6 +170,51 @@ export default function AdminDashboardPage() {
     [stats.failed, stats.queued, stats.unscored]
   )
 
+  const nextStep = useMemo<NextStep>(() => {
+    if (jobs.length === 0) {
+      return {
+        title: 'Start with one role',
+        description: 'Create the first role, keep it as draft, then publish when the description is ready.',
+        href: '/admin/jobs',
+        label: 'Create role',
+      }
+    }
+
+    if (stats.activeJobs === 0) {
+      return {
+        title: 'Publish a role',
+        description: 'Candidates can apply only after at least one role is visible in the public portal.',
+        href: '/admin/jobs',
+        label: 'Open jobs',
+      }
+    }
+
+    if (stats.totalCandidates === 0) {
+      return {
+        title: 'Check the public flow',
+        description: 'Open the public jobs page and confirm that candidates can read the role before applying.',
+        href: '/jobs',
+        label: 'Open portal',
+      }
+    }
+
+    if (stats.queued > 0 || stats.failed > 0) {
+      return {
+        title: 'Clear processing issues',
+        description: 'Review queued or failed CV processing before comparing candidates.',
+        href: '/admin/candidates',
+        label: 'Open candidates',
+      }
+    }
+
+    return {
+      title: 'Review the pipeline',
+      description: 'Open candidates, compare scores, and move strong profiles to the next stage.',
+      href: '/admin/candidates',
+      label: 'Review candidates',
+    }
+  }, [jobs.length, stats.activeJobs, stats.failed, stats.queued, stats.totalCandidates])
+
   return (
     <AppShell>
       <Toast toast={toast} onClose={() => setToast({ open: false })} />
@@ -170,7 +222,7 @@ export default function AdminDashboardPage() {
       <AdminPageHeader
         eyebrow="Overview"
         title="Admin dashboard"
-        description="A focused control room for the hiring workflow: jobs, candidates, queue health, and recent activity."
+        description="See the current hiring status and move to the next useful action."
         actions={
           <>
             <Link href="/admin/jobs" className={adminPrimaryButtonClassName}>
@@ -183,6 +235,8 @@ export default function AdminDashboardPage() {
           </>
         }
       />
+
+      <NextActionBand loading={loading} step={nextStep} />
 
       <MetricStrip items={metricItems} loading={loading} />
 
@@ -302,6 +356,31 @@ export default function AdminDashboardPage() {
         </Panel>
       </section>
     </AppShell>
+  )
+}
+
+function NextActionBand({ step, loading }: { step: NextStep; loading: boolean }) {
+  return (
+    <section className="mt-5 rounded-[10px] border border-slate-200 bg-slate-950 px-5 py-4 text-white">
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <Skeleton className="h-12 bg-white/15" />
+          <Skeleton className="h-10 w-32 bg-white/15" />
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-white/55">Next step</div>
+            <div className="mt-1 text-xl font-black tracking-tight">{step.title}</div>
+            <div className="mt-1 text-sm font-semibold leading-relaxed text-white/70">{step.description}</div>
+          </div>
+          <Link href={step.href} className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-white px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-slate-100">
+            {step.label}
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
+    </section>
   )
 }
 

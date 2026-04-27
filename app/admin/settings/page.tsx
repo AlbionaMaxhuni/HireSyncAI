@@ -15,6 +15,7 @@ import AppShell from '@/components/layout/AppShell'
 import Skeleton from '@/components/ui/Skeleton'
 import Toast, { type ToastState } from '@/components/ui/Toast'
 import { useAuth } from '@/context/AuthContext'
+import { PLAN_LIMITS, getWorkspacePlan, getWorkspaceUsageCount, type WorkspacePlan, type UsageFeature } from '@/lib/saas'
 import { createClient } from '@/utils/supabase/client'
 
 type ProfileSettingsRow = {
@@ -54,6 +55,14 @@ export default function AdminSettingsPage() {
   const [companyTagline, setCompanyTagline] = useState('')
   const [saving, setSaving] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
+  const [openingBilling, setOpeningBilling] = useState(false)
+  const [plan, setPlan] = useState<WorkspacePlan>('starter')
+  const [usage, setUsage] = useState<Record<UsageFeature, number>>({
+    jobs: 0,
+    candidates: 0,
+    members: 0,
+    aiScreenings: 0,
+  })
   const [toast, setToast] = useState<ToastState>({ open: false })
 
   useEffect(() => {
@@ -112,6 +121,33 @@ export default function AdminSettingsPage() {
       active = false
     }
   }, [authLoading, supabase, user, workspace])
+
+  useEffect(() => {
+    let active = true
+
+    const loadUsage = async () => {
+      if (authLoading || !workspace?.id) return
+
+      const [workspacePlan, jobs, candidates, members, aiScreenings] = await Promise.all([
+        getWorkspacePlan(supabase, workspace.id),
+        getWorkspaceUsageCount(supabase, workspace.id, 'jobs'),
+        getWorkspaceUsageCount(supabase, workspace.id, 'candidates'),
+        getWorkspaceUsageCount(supabase, workspace.id, 'members'),
+        getWorkspaceUsageCount(supabase, workspace.id, 'aiScreenings'),
+      ])
+
+      if (!active) return
+
+      setPlan(workspacePlan)
+      setUsage({ jobs, candidates, members, aiScreenings })
+    }
+
+    void loadUsage()
+
+    return () => {
+      active = false
+    }
+  }, [authLoading, supabase, workspace])
 
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault()
@@ -181,6 +217,30 @@ export default function AdminSettingsPage() {
       setToast({ open: true, type: 'error', message: getErrorMessage(error) })
     } finally {
       setSendingReset(false)
+    }
+  }
+
+  const openBillingCheckout = async (nextPlan: 'pro' | 'business') => {
+    setOpeningBilling(true)
+
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: nextPlan }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null
+
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error ?? 'Could not open billing checkout.')
+      }
+
+      window.location.href = payload.url
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setOpeningBilling(false)
     }
   }
 
@@ -347,6 +407,28 @@ export default function AdminSettingsPage() {
 
         <div className="space-y-5">
           <AdminSectionCard
+            eyebrow="Plan"
+            title="Plan and usage"
+            description="Keep workspace usage visible before billing is connected to Stripe."
+          >
+            <div className="space-y-3">
+              <StatusRow icon={BriefcaseBusiness} label="Current plan" value={plan} />
+              <UsageRow label="Jobs" value={usage.jobs} limit={PLAN_LIMITS[plan].jobs} />
+              <UsageRow label="Candidates" value={usage.candidates} limit={PLAN_LIMITS[plan].candidates} />
+              <UsageRow label="Team seats" value={usage.members} limit={PLAN_LIMITS[plan].members} />
+              <UsageRow label="AI screenings" value={usage.aiScreenings} limit={PLAN_LIMITS[plan].aiScreenings} />
+              <button
+                type="button"
+                onClick={() => openBillingCheckout('pro')}
+                disabled={openingBilling || plan !== 'starter'}
+                className={`w-full disabled:cursor-not-allowed disabled:opacity-50 ${adminPrimaryButtonClassName}`}
+              >
+                {openingBilling ? 'Opening checkout...' : plan === 'starter' ? 'Upgrade to Pro' : 'Plan active'}
+              </button>
+            </div>
+          </AdminSectionCard>
+
+          <AdminSectionCard
             eyebrow="Security"
             title="Password reset"
             description="Use the secure reset flow when you want to rotate or recover the password for this account."
@@ -423,6 +505,27 @@ function StatusRow({
           <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</div>
           <div className="mt-1 text-sm font-semibold leading-relaxed text-slate-600">{value}</div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function UsageRow({ label, value, limit }: { label: string; value: number; limit: number }) {
+  const percentage = Math.min((value / limit) * 100, 100)
+
+  return (
+    <div className="rounded-[12px] border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</div>
+          <div className="mt-1 text-sm font-black text-slate-700">
+            {value} of {limit}
+          </div>
+        </div>
+        <div className="min-w-[90px] text-right text-xs font-black text-slate-500">{Math.round(percentage)}%</div>
+      </div>
+      <div className="mt-3 h-2 rounded-full bg-white">
+        <div className="h-2 rounded-full bg-slate-950" style={{ width: `${percentage}%` }} />
       </div>
     </div>
   )

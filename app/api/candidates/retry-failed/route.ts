@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { recordAuditLog } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
@@ -9,13 +11,25 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const limit = checkRateLimit(rateLimitKey(req, 'candidates:retry-failed', user.id), {
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many retry attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(limit) }
+    )
+  }
+
   const body = await req.json().catch(() => null)
   const jobId = String(body?.jobId ?? '')
   if (!jobId) return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
 
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id')
+    .select('id,workspace_id')
     .eq('id', jobId)
     .maybeSingle()
 
@@ -44,6 +58,15 @@ export async function POST(req: Request) {
     .in('id', failedIds)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  await recordAuditLog(supabase, {
+    workspaceId: job.workspace_id,
+    actorUserId: user.id,
+    action: 'candidate.retry_failed',
+    targetType: 'job',
+    targetId: jobId,
+    metadata: { retried: failedIds.length },
+  })
 
   return NextResponse.json({ ok: true, retried: failedIds.length })
 }

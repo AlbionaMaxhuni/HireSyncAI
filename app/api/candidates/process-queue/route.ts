@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { processCandidateBatch } from '@/lib/candidate-processing'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { checkWorkspaceCapacity, recordAuditLog } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
@@ -24,6 +26,18 @@ export async function POST(req: Request) {
 
   if (role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const requestLimit = checkRateLimit(rateLimitKey(req, 'ai:process-queue', user.id), {
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!requestLimit.ok) {
+    return NextResponse.json(
+      { error: 'Too many queue processing requests. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(requestLimit) }
+    )
   }
 
   const body = (await req.json().catch(() => null)) as { jobId?: string; limit?: number } | null
@@ -55,6 +69,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, processed: 0 })
   }
 
+  const capacity = await checkWorkspaceCapacity({
+    supabase: supabaseAdmin,
+    workspaceId: job.workspace_id,
+    feature: 'aiScreenings',
+    increment: queued.length,
+  })
+
+  if (!capacity.ok) {
+    return NextResponse.json({ error: capacity.message }, { status: 402 })
+  }
+
   const result = await processCandidateBatch({
     supabaseAdmin,
     job: {
@@ -66,7 +91,20 @@ export async function POST(req: Request) {
       id: candidate.id,
       resume_file_path: candidate.resume_file_path,
       source_filename: candidate.source_filename,
+      workspace_id: candidate.workspace_id,
     })),
+  })
+
+  await recordAuditLog(supabaseAdmin, {
+    workspaceId: job.workspace_id,
+    actorUserId: user.id,
+    action: 'candidate.queue_processed',
+    targetType: 'job',
+    targetId: job.id,
+    metadata: {
+      processed: result.processed,
+      failed: result.failed.length,
+    },
   })
 
   return NextResponse.json({

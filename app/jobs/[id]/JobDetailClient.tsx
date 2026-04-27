@@ -188,12 +188,21 @@ export default function JobDetailClient({
     setUpdatingId(candidateId)
 
     try {
-      const { error } = await supabase.from('candidates').update({ status: nextStage }).eq('id', candidateId)
-      if (error) throw error
+      const response = await fetch(`/api/candidates/${candidateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStage }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { candidate?: CandidateRecord; error?: string } | null
+
+      if (!response.ok || !payload?.candidate) {
+        throw new Error(payload?.error ?? 'Could not update candidate stage.')
+      }
 
       setCandidates((previous) =>
         previous.map((candidate) =>
-          candidate.id === candidateId ? { ...candidate, status: nextStage } : candidate
+          candidate.id === candidateId ? (payload.candidate as CandidateRecord) : candidate
         )
       )
     } catch (error: unknown) {
@@ -208,8 +217,15 @@ export default function JobDetailClient({
     if (!confirmed) return
 
     try {
-      const { error } = await supabase.from('candidates').delete().eq('id', candidateId)
-      if (error) throw error
+      const response = await fetch(`/api/candidates/${candidateId}`, {
+        method: 'DELETE',
+      })
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Could not delete candidate.')
+      }
 
       setCandidates((previous) => previous.filter((candidate) => candidate.id !== candidateId))
       setToast({ open: true, type: 'success', message: 'Candidate deleted.' })
@@ -226,105 +242,40 @@ export default function JobDetailClient({
     setCreating(true)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const response = await fetch('/api/candidates/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job.id,
+          fullName: fullName.trim(),
+          email: email.trim(),
+          resumeText: resumeText.trim(),
+        }),
+      })
 
-      const { data, error } = await supabase
-        .from('candidates')
-        .insert([
-          {
-            user_id: user?.id,
-            job_id: job.id,
-            workspace_id: job.workspace_id ?? null,
-            full_name: fullName.trim(),
-            email: email.trim() || null,
-            resume_text: resumeText.trim(),
-            status: 'applied',
-            processing_status: null,
-            processing_error: null,
-            source: 'manual-entry',
-          },
-        ])
-        .select('*')
-        .single()
+      const payload = (await response.json().catch(() => null)) as {
+        candidate?: CandidateRecord
+        analyzed?: boolean
+        analysisSkippedReason?: string | null
+        error?: string
+      } | null
 
-      if (error) throw error
-
-      const createdCandidate = data as CandidateRecord
-      setCandidates((previous) => [createdCandidate, ...previous])
-
-      let successMessage = 'Candidate added successfully.'
-
-      try {
-        const analysisResponse = await fetch('/api/candidates/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobTitle: job.title,
-            jobDescription: job.description,
-            resumeText: resumeText.trim(),
-            candidateName: fullName.trim(),
-          }),
-        })
-
-        const analysisPayload = (await analysisResponse.json().catch(() => null)) as {
-          error?: string
-          score?: number
-          seniority?: string
-          status_suggestion?: 'screening' | 'interview' | 'rejected'
-          summary?: string
-          skills?: string[]
-          red_flags?: string[]
-          interview_questions?: string[]
-        } | null
-
-        if (!analysisResponse.ok) {
-          throw new Error(analysisPayload?.error ?? 'Could not analyze candidate.')
-        }
-
-        const recommendedNextStep =
-          analysisPayload?.status_suggestion === 'interview'
-            ? 'Recommended next step: interview.'
-            : analysisPayload?.status_suggestion === 'rejected'
-              ? 'Recommended next step: careful rejection review.'
-              : 'Recommended next step: screening review.'
-
-        const { data: analyzedCandidate, error: analyzeUpdateError } = await supabase
-          .from('candidates')
-          .update({
-            score: typeof analysisPayload?.score === 'number' ? analysisPayload.score : null,
-            seniority: analysisPayload?.seniority ?? null,
-            summary: [analysisPayload?.summary ?? '', recommendedNextStep].filter(Boolean).join(' '),
-            skills: Array.isArray(analysisPayload?.skills) ? analysisPayload.skills : [],
-            red_flags: Array.isArray(analysisPayload?.red_flags) ? analysisPayload.red_flags : [],
-            interview_questions: Array.isArray(analysisPayload?.interview_questions)
-              ? analysisPayload.interview_questions.join('\n')
-              : null,
-            status: 'screening',
-            processing_status: 'done',
-            processing_error: null,
-          })
-          .eq('id', createdCandidate.id)
-          .select('*')
-          .single()
-
-        if (analyzeUpdateError) throw analyzeUpdateError
-
-        setCandidates((previous) =>
-          previous.map((candidate) =>
-            candidate.id === createdCandidate.id ? (analyzedCandidate as CandidateRecord) : candidate
-          )
-        )
-        successMessage = 'Candidate added and analyzed successfully.'
-      } catch {
-        successMessage = 'Candidate added, but AI analysis was skipped. Review it manually for now.'
+      if (!response.ok || !payload?.candidate) {
+        throw new Error(payload?.error ?? 'Could not add candidate.')
       }
+
+      setCandidates((previous) => [payload.candidate as CandidateRecord, ...previous])
 
       setFullName('')
       setEmail('')
       setResumeText('')
-      setToast({ open: true, type: 'success', message: successMessage })
+      setToast({
+        open: true,
+        type: 'success',
+        message: payload.analyzed
+          ? 'Candidate added and analyzed successfully.'
+          : 'Candidate added, but AI analysis was skipped. Review it manually for now.',
+      })
     } catch (error: unknown) {
       setToast({ open: true, type: 'error', message: getErrorMessage(error) })
     } finally {

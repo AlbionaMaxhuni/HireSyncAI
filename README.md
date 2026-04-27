@@ -39,6 +39,8 @@ The app supports two connected flows:
 - Workspace team invites
 - Candidate and team outreach helpers
 - Analytics overview for jobs, notes, and candidate stages
+- SaaS foundation: plan limits, audit logs, usage events, rate limits, Stripe checkout foundation
+- Privacy foundation: candidate consent, data retention fields, privacy and terms pages
 
 ## Tech Stack
 
@@ -47,6 +49,7 @@ The app supports two connected flows:
 - Database/Auth/Storage: Supabase
 - AI Integration: OpenRouter
 - Optional Email Delivery: Resend
+- Billing foundation: Stripe Checkout and Stripe webhooks
 - Deployment: Vercel
 
 ## Database And Security Notes
@@ -57,6 +60,9 @@ The project now uses a workspace-based structure instead of a single-admin model
 - `jobs`, `candidates`, and `candidate_notes` are linked to a workspace
 - Supabase Row Level Security is used to scope access correctly
 - `profiles` stores the canonical app role and basic identity data
+- `audit_logs` records sensitive workspace actions
+- `usage_events` supports plan limits and AI usage tracking
+- candidate consent fields support privacy/readiness requirements
 
 Relevant migrations live in [`supabase/migrations`](supabase/migrations):
 
@@ -64,6 +70,7 @@ Relevant migrations live in [`supabase/migrations`](supabase/migrations):
 - [`20260423_hiresync_company_profile.sql`](supabase/migrations/20260423_hiresync_company_profile.sql)
 - [`20260423_hiresync_workspace_foundation.sql`](supabase/migrations/20260423_hiresync_workspace_foundation.sql)
 - [`20260424_hiresync_email_delivery.sql`](supabase/migrations/20260424_hiresync_email_delivery.sql)
+- [`20260427_hiresync_saas_foundation.sql`](supabase/migrations/20260427_hiresync_saas_foundation.sql)
 
 ## Local Setup
 
@@ -85,10 +92,16 @@ npm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_CANDIDATE_MODEL=openai/gpt-4o-mini
 RESEND_API_KEY=your_resend_api_key
 EMAIL_FROM="HireSync AI <noreply@your-domain.com>"
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+STRIPE_PRO_PRICE_ID=your_stripe_pro_price_id
+STRIPE_BUSINESS_PRICE_ID=your_stripe_business_price_id
 ```
 
 4. Apply the Supabase migrations in `supabase/migrations`.
@@ -114,8 +127,26 @@ npm run dev
 
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
+- `OPENROUTER_CANDIDATE_MODEL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRO_PRICE_ID`
+- `STRIPE_BUSINESS_PRICE_ID`
 
 If the optional email variables are missing, the app can still be used with the manual draft/copy communication flow.
+If the Stripe variables are missing, the app keeps usage visible but checkout will stay disabled with a clear error.
+
+## SaaS Readiness Notes
+
+The app includes production-oriented foundations:
+
+- route-level rate limits for uploads, AI processing, email, billing, jobs, candidates, and invites
+- plan limits for jobs, candidates, team seats, and AI screenings
+- audit logging for key workspace actions
+- candidate privacy consent and data retention fields
+- Stripe Checkout and webhook routes for subscription upgrades
+
+Before selling this as a live product, configure real provider credentials, verify the sending email domain, connect Stripe products/prices, and run all Supabase migrations in production.
 
 ## Demo Preparation
 

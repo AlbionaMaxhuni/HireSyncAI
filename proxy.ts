@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/utils/supabase/middleware'
 
-const PUBLIC_EXACT_PATHS = ['/']
+const PUBLIC_EXACT_PATHS = ['/', '/privacy', '/terms']
 const PUBLIC_PREFIX_PATHS = ['/jobs', '/login', '/reset-password', '/logout', '/auth', '/api']
 
 function isPublicPath(pathname: string) {

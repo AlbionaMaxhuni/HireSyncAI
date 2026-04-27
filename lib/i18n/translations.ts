@@ -525,6 +525,10 @@ const exactTranslations: Record<string, string> = {
   'Workspace account': 'Llogaria e workspace-it',
   'Workspace invite': 'Ftesë workspace-i',
   'Workspace invite accepted successfully.': 'Ftesa e workspace-it u pranua me sukses.',
+  'Email draft opened. Send it from your email client to share the invite.':
+    'Drafti i emailit u hap. Dërgoje nga email klienti yt për ta ndarë ftesën.',
+  'Email draft opened. Send it from your email client to share the update.':
+    'Drafti i emailit u hap. Dërgoje nga email klienti yt për ta ndarë përditësimin.',
   'Workspace invite email sent successfully.': 'Emaili i ftesës së workspace-it u dërgua me sukses.',
   'Workspace not available yet': 'Workspace ende nuk është i disponueshëm',
   'Workspace not loaded yet': 'Workspace ende nuk është ngarkuar',
@@ -892,6 +896,74 @@ const supplementalTranslations: Record<string, string> = {
     'Dërgimi i emailit nuk është konfiguruar. Përdor draftin e emailit ose kopjo linkun për ta dërguar ftesën manualisht.',
   'Email sending is not configured yet. Use Open email draft or Copy link to share this invite manually.':
     'Dërgimi i emailit ende nuk është konfiguruar. Përdor Open email draft ose Copy link për ta ndarë ftesën manualisht.',
+  'Active members': 'Anëtarë aktivë',
+  'Add the email address, create the invite, then send it from the access list.':
+    'Shto adresën e emailit, krijo ftesën, pastaj dërgoje nga lista e qasjes.',
+  'Active teammates and pending invite links stay in one clean list.':
+    'Anëtarët aktivë dhe ftesat në pritje qëndrojnë në një listë të pastër.',
+  'Brief is ready.': 'Përshkrimi është gati.',
+  Cancel: 'Anulo',
+  'Canceling...': 'Duke anuluar...',
+  'Check the public flow': 'Kontrollo flow-n publik',
+  'Clear processing issues': 'Pastro problemet e procesimit',
+  'Candidates can apply only after at least one role is visible in the public portal.':
+    'Kandidatët mund të aplikojnë vetëm pasi të paktën një rol të jetë i dukshëm në portalin publik.',
+  'Copy invite link': 'Kopjo linkun e ftesës',
+  Date: 'Data',
+  'Draft first, publish when the role looks ready.': 'Mbaje draft së pari, publikoje kur roli të jetë gati.',
+  'Create the first role, keep it as draft, then publish when the description is ready.':
+    'Krijo rolin e parë, mbaje draft, pastaj publikoje kur përshkrimi të jetë gati.',
+  'Create roles, publish what candidates should see, and keep each role easy to review.':
+    'Krijo role, publiko atë që kandidatët duhet ta shohin dhe mbaje çdo rol të lehtë për shqyrtim.',
+  'Filter by stage, compare scores, and open the right profile faster.':
+    'Filtro sipas fazës, krahaso pikët dhe hape më shpejt profilin e duhur.',
+  'Invite created. Send the email or copy the invite link from the access list.':
+    'Ftesa u krijua. Dërgo emailin ose kopjo linkun e ftesës nga lista e qasjes.',
+  'Invite link ready': 'Linku i ftesës është gati',
+  'Invite teammate': 'Fto anëtar ekipi',
+  'Members and invites': 'Anëtarët dhe ftesat',
+  'No access records yet': 'Ende nuk ka qasje të regjistruara',
+  'Open portal': 'Hap portalin',
+  'Open candidates, compare scores, and move strong profiles to the next stage.':
+    'Hap kandidatët, krahaso pikët dhe kalo profilet e forta në fazën tjetër.',
+  'Open the public jobs page and confirm that candidates can read the role before applying.':
+    'Hap faqen publike të pozitave dhe konfirmo që kandidatët mund ta lexojnë rolin para aplikimit.',
+  'People with access': 'Persona me qasje',
+  Person: 'Personi',
+  'Published roles will collect applications here.': 'Rolet e publikuara do t’i mbledhin aplikimet këtu.',
+  'Review the pipeline': 'Shqyrto pipeline-in',
+  'Review candidates': 'Shqyrto kandidatët',
+  'Review queued or failed CV processing before comparing candidates.':
+    'Shqyrto CV-të në radhë ose të dështuara para krahasimit të kandidatëve.',
+  'Search name, email, role, or skill': 'Kërko emër, email, rol ose aftësi',
+  'Search role title or brief': 'Kërko titullin ose përshkrimin e rolit',
+  'See the current hiring status and move to the next useful action.':
+    'Shiko statusin aktual të punësimit dhe vazhdo te veprimi më i dobishëm.',
+  'Send email': 'Dërgo email',
+  'Start with one role': 'Fillo me një rol',
+  'Waiting to join': 'Në pritje për t’u bashkuar',
+  'AI screenings': 'Screening me AI',
+  'Back to jobs': 'Kthehu te pozitat',
+  'Billing is not configured yet.': 'Billing ende nuk është konfiguruar.',
+  'Current plan': 'Plani aktual',
+  'Data retention and deletion': 'Ruajtja dhe fshirja e të dhënave',
+  'How we use it': 'Si e përdorim',
+  'I agree that my CV and application data can be processed for this hiring process. I can request deletion of my data according to the':
+    'Pajtohem që CV-ja dhe të dhënat e aplikimit të përpunohen për këtë proces punësimi. Mund të kërkoj fshirjen e të dhënave sipas',
+  'Opening checkout...': 'Duke hapur checkout...',
+  'Plan active': 'Plani aktiv',
+  'Plan and usage': 'Plani dhe përdorimi',
+  'Privacy policy': 'Politika e privatësisë',
+  'privacy policy': 'politikës së privatësisë',
+  'Responsible use': 'Përdorim i përgjegjshëm',
+  'Service availability': 'Disponueshmëria e shërbimit',
+  'Team seats': 'Vendet e ekipit',
+  'Terms of use': 'Kushtet e përdorimit',
+  'Upgrade to Pro': 'Kalo në Pro',
+  'What we collect': 'Çfarë mbledhim',
+  'Workspace owners are responsible for inviting only authorized teammates and removing access when it is no longer needed.':
+    'Pronarët e workspace-it janë përgjegjës të ftojnë vetëm anëtarë të autorizuar dhe ta largojnë qasjen kur nuk nevojitet më.',
+  'Workspace access': 'Qasje në workspace',
   'Hiring Team': 'Ekipi i punësimit',
   'HireSync user': 'Përdorues HireSync',
   'not started': 'ende pa filluar',
@@ -937,6 +1009,7 @@ const supplementalTranslations: Record<string, string> = {
   'Filtered view': 'Pamje e filtruar',
   'Live roles': 'Role aktive',
   'Needs attention': 'Kërkon vëmendje',
+  'Next step': 'Hapi i radhës',
   'New role': 'Rol i ri',
   'No roles match this search': 'Asnjë rol nuk përputhet me këtë kërkim',
   'No roles yet': 'Ende nuk ka role',
@@ -1080,6 +1153,12 @@ const translationRules: TranslationRule[] = [
     sq: /^(\d+)\/(\d+) gati$/,
     toSq: ([, ready, total]) => `${ready}/${total} gati`,
     toEn: ([, ready, total]) => `${ready}/${total} ready`,
+  },
+  {
+    en: /^(\d+) more characters needed\.$/,
+    sq: /^Duhen edhe (\d+) karaktere\.$/,
+    toSq: ([, count]) => `Duhen edhe ${count} karaktere.`,
+    toEn: ([, count]) => `${count} more characters needed.`,
   },
   {
     en: /^Created (.+)$/,

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { processCandidateBatch } from '@/lib/candidate-processing'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { checkWorkspaceCapacity, recordAuditLog, recordUsageEvent } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+const MAX_FILES_PER_UPLOAD = 25
 
 export async function POST(req: Request) {
   const { supabase, user, role } = await getOptionalServerUserWithRole()
@@ -21,12 +24,27 @@ export async function POST(req: Request) {
     { auth: { persistSession: false } }
   )
 
+  const limit = checkRateLimit(rateLimitKey(req, 'candidates:bulk-upload', user.id), {
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many upload attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(limit) }
+    )
+  }
+
   const form = await req.formData()
   const jobId = String(form.get('jobId') ?? '')
   const files = form.getAll('files') as File[]
 
   if (!jobId) return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
   if (!files.length) return NextResponse.json({ error: 'No files provided' }, { status: 400 })
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    return NextResponse.json({ error: `Upload up to ${MAX_FILES_PER_UPLOAD} files at a time.` }, { status: 400 })
+  }
 
   const { data: job } = await supabase
     .from('jobs')
@@ -36,12 +54,24 @@ export async function POST(req: Request) {
 
   if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
 
+  const capacity = await checkWorkspaceCapacity({
+    supabase: supabaseAdmin,
+    workspaceId: job.workspace_id,
+    feature: 'candidates',
+    increment: files.length,
+  })
+
+  if (!capacity.ok) {
+    return NextResponse.json({ error: capacity.message }, { status: 402 })
+  }
+
   const createdCandidateIds: string[] = []
   const errors: string[] = []
   const uploadedCandidates: Array<{
     id: string
     resume_file_path: string | null
     source_filename: string | null
+    workspace_id?: string | null
   }> = []
 
   const companyName =
@@ -120,6 +150,7 @@ export async function POST(req: Request) {
       id: insert.data.id,
       resume_file_path: insert.data.resume_file_path ?? path,
       source_filename: insert.data.source_filename ?? name,
+      workspace_id: job.workspace_id ?? null,
     })
   }
 
@@ -133,10 +164,52 @@ export async function POST(req: Request) {
     )
   }
 
+  await recordUsageEvent(supabaseAdmin, {
+    workspaceId: job.workspace_id,
+    userId: user.id,
+    feature: 'candidates',
+    quantity: createdCandidateIds.length,
+    metadata: {
+      source: 'bulk-upload',
+      jobId,
+    },
+  })
+
+  await recordAuditLog(supabaseAdmin, {
+    workspaceId: job.workspace_id,
+    actorUserId: user.id,
+    action: 'candidate.bulk_uploaded',
+    targetType: 'job',
+    targetId: jobId,
+    metadata: {
+      created: createdCandidateIds.length,
+      skipped: errors.length,
+    },
+  })
+
   let processed = 0
   const processingErrors: string[] = []
 
   if (process.env.OPENROUTER_API_KEY) {
+    const aiCapacity = await checkWorkspaceCapacity({
+      supabase: supabaseAdmin,
+      workspaceId: job.workspace_id,
+      feature: 'aiScreenings',
+      increment: uploadedCandidates.length,
+    })
+
+    if (!aiCapacity.ok) {
+      return NextResponse.json({
+        ok: true,
+        created: createdCandidateIds.length,
+        processed,
+        queued: createdCandidateIds.length,
+        candidateIds: createdCandidateIds,
+        errors,
+        processingErrors: [aiCapacity.message],
+      })
+    }
+
     const processingResult = await processCandidateBatch({
       supabaseAdmin,
       job: {

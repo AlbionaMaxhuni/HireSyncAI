@@ -180,7 +180,15 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         <footer className="mt-6 rounded-[14px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-500 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>HireSync AI keeps hiring clear for teams and simple for candidates.</div>
-            <div>Public jobs, guided applications, and a focused admin workspace.</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span>Public jobs, guided applications, and a focused admin workspace.</span>
+              <Link href="/privacy" className="font-black text-slate-700 transition hover:text-slate-950">
+                Privacy
+              </Link>
+              <Link href="/terms" className="font-black text-slate-700 transition hover:text-slate-950">
+                Terms
+              </Link>
+            </div>
           </div>
         </footer>
       </div>

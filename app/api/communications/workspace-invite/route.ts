@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { buildWorkspaceInviteEmail } from '@/lib/communications'
 import { isEmailDeliveryConfigured, sendTransactionalEmail } from '@/lib/email'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { recordAuditLog } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 import type { WorkspaceInviteRecord } from '@/lib/workspace'
 
@@ -23,6 +25,18 @@ export async function POST(req: Request) {
 
   if (role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const limit = checkRateLimit(rateLimitKey(req, 'communications:workspace-invite', user.id), {
+    limit: 40,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many invite email attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(limit) }
+    )
   }
 
   const body = (await req.json().catch(() => null)) as { inviteId?: string } | null
@@ -106,6 +120,18 @@ export async function POST(req: Request) {
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
+
+    await recordAuditLog(supabase, {
+      workspaceId: invite.workspace_id,
+      actorUserId: user.id,
+      action: 'workspace.invite_email_sent',
+      targetType: 'workspace_invite',
+      targetId: invite.id,
+      metadata: {
+        emailId: sent.id,
+        to: invite.email,
+      },
+    })
 
     return NextResponse.json({
       ok: true,

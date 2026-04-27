@@ -140,23 +140,23 @@ export default function AdminJobsPage() {
     setCreating(true)
 
     try {
-      const { data, error } = await supabase
-        .from('jobs')
-        .insert([
-          {
-            user_id: user.id,
-            workspace_id: workspace.id,
-            title: titleTrimmed,
-            description: descriptionTrimmed,
-            status: jobStatus,
-          },
-        ])
-        .select('*')
-        .single()
+      const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: titleTrimmed,
+          description: descriptionTrimmed,
+          status: jobStatus,
+        }),
+      })
 
-      if (error) throw error
+      const payload = (await response.json().catch(() => null)) as { job?: JobRecord; error?: string } | null
 
-      setJobs((previous) => [data as JobRecord, ...previous])
+      if (!response.ok || !payload?.job) {
+        throw new Error(payload?.error ?? 'Could not create role.')
+      }
+
+      setJobs((previous) => [payload.job as JobRecord, ...previous])
       setTitle('')
       setDescription('')
       setJobStatus('draft')
@@ -172,11 +172,20 @@ export default function AdminJobsPage() {
     setUpdatingJobId(jobId)
 
     try {
-      const { error } = await supabase.from('jobs').update({ status: nextStatus }).eq('id', jobId)
-      if (error) throw error
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { job?: JobRecord; error?: string } | null
+
+      if (!response.ok || !payload?.job) {
+        throw new Error(payload?.error ?? 'Could not update role.')
+      }
 
       setJobs((previous) =>
-        previous.map((job) => (job.id === jobId ? { ...job, status: nextStatus } : job))
+        previous.map((job) => (job.id === jobId ? (payload.job as JobRecord) : job))
       )
       setToast({
         open: true,
@@ -195,8 +204,15 @@ export default function AdminJobsPage() {
     if (!confirmed) return
 
     try {
-      const { error } = await supabase.from('jobs').delete().eq('id', jobId)
-      if (error) throw error
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'DELETE',
+      })
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Could not delete role.')
+      }
 
       setJobs((previous) => previous.filter((job) => job.id !== jobId))
       setCandidates((previous) => previous.filter((candidate) => candidate.job_id !== jobId))
@@ -213,7 +229,7 @@ export default function AdminJobsPage() {
       <AdminPageHeader
         eyebrow="Jobs"
         title="Roles"
-        description="Create, publish, and manage roles from one table-first workspace."
+        description="Create roles, publish what candidates should see, and keep each role easy to review."
         actions={
           <Link href="/admin/candidates" className={adminSecondaryButtonClassName}>
             Candidates
@@ -223,11 +239,11 @@ export default function AdminJobsPage() {
 
       <MetricStrip items={metricItems} loading={loading} />
 
-      <details className="mt-5 rounded-[10px] border border-slate-200 bg-white">
+      <details open={jobs.length === 0} className="mt-5 rounded-[10px] border border-slate-200 bg-white">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
           <div>
             <div className="text-base font-black text-slate-950">New role</div>
-            <div className="mt-1 text-sm font-semibold text-slate-500">Create as draft, then publish when ready.</div>
+            <div className="mt-1 text-sm font-semibold text-slate-500">Draft first, publish when the role looks ready.</div>
           </div>
           <span className="inline-flex items-center gap-2 rounded-[8px] bg-slate-950 px-4 py-2 text-sm font-black text-white">
             <Plus size={16} />
@@ -275,7 +291,9 @@ export default function AdminJobsPage() {
               className={`mt-2 ${adminTextareaClassName}`}
             />
             <div className="mt-2 text-xs font-semibold text-slate-500">
-              Minimum 30 characters. A clearer brief gives better AI summaries and a cleaner pipeline.
+              {descriptionTrimmed.length >= 30
+                ? 'Brief is ready.'
+                : `${Math.max(30 - descriptionTrimmed.length, 0)} more characters needed.`}
             </div>
           </div>
         </form>
@@ -288,7 +306,7 @@ export default function AdminJobsPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search roles"
+              placeholder="Search role title or brief"
               className={`pl-11 ${adminInputClassName}`}
             />
           </div>

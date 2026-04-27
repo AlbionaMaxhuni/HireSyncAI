@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { buildCandidateStatusEmail } from '@/lib/communications'
-import { sendTransactionalEmail } from '@/lib/email'
+import { isEmailDeliveryConfigured, sendTransactionalEmail } from '@/lib/email'
+import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { recordAuditLog } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
 import type { CandidateNoteRecord } from '@/lib/hiring'
 
@@ -29,6 +31,18 @@ export async function POST(req: Request) {
 
   if (role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const limit = checkRateLimit(rateLimitKey(req, 'communications:candidate-status', user.id), {
+    limit: 60,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many email attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(limit) }
+    )
   }
 
   const body = (await req.json().catch(() => null)) as { candidateId?: string; stage?: string } | null
@@ -71,6 +85,13 @@ export async function POST(req: Request) {
     stage: requestedStage || typedCandidate.status,
   })
 
+  if (!isEmailDeliveryConfigured()) {
+    return NextResponse.json(
+      { error: 'Email delivery is not configured. Use the email draft or copy the message instead.' },
+      { status: 503 }
+    )
+  }
+
   try {
     const sent = await sendTransactionalEmail({
       to: candidate.email,
@@ -97,6 +118,18 @@ export async function POST(req: Request) {
         note = noteInsert.data as CandidateNoteRecord
       }
     }
+
+    await recordAuditLog(supabase, {
+      workspaceId: candidate.workspace_id,
+      actorUserId: user.id,
+      action: 'candidate.email_sent',
+      targetType: 'candidate',
+      targetId: candidate.id,
+      metadata: {
+        stage: requestedStage || typedCandidate.status,
+        emailId: sent.id,
+      },
+    })
 
     return NextResponse.json({
       ok: true,

@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getUserDisplayName } from '@/lib/auth'
 import { isJobPublic } from '@/lib/hiring'
+import { getClientIp, checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
+import { checkWorkspaceCapacity, recordAuditLog, recordUsageEvent } from '@/lib/saas'
 import { createServerSupabaseAdminClient, getOptionalServerUser } from '@/lib/server-auth'
 
 export const runtime = 'nodejs'
 const MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024
+const CONSENT_VERSION = '2026-04'
 
 function getFileExtension(name: string) {
   const normalized = name.trim().toLowerCase()
@@ -15,9 +18,29 @@ function getFileExtension(name: string) {
 
 export async function POST(req: Request) {
   const { user, supabase } = await getOptionalServerUser()
+  const ipLimit = checkRateLimit(rateLimitKey(req, 'applications:ip'), { limit: 20, windowMs: 60 * 60 * 1000 })
+
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      { error: 'Too many application attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(ipLimit) }
+    )
+  }
 
   if (!user) {
     return NextResponse.json({ error: 'Please sign in before applying.' }, { status: 401 })
+  }
+
+  const userLimit = checkRateLimit(rateLimitKey(req, 'applications:user', user.id), {
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!userLimit.ok) {
+    return NextResponse.json(
+      { error: 'Too many application attempts. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(userLimit) }
+    )
   }
 
   const form = await req.formData()
@@ -26,6 +49,7 @@ export async function POST(req: Request) {
   const fullName = String(form.get('fullName') ?? getUserDisplayName(user, '')).trim()
   const location = String(form.get('location') ?? '').trim()
   const note = String(form.get('note') ?? '').trim()
+  const privacyAccepted = String(form.get('privacyAccepted') ?? '') === '1'
   const resume = form.get('resume')
 
   if (!jobId) {
@@ -38,6 +62,10 @@ export async function POST(req: Request) {
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required.' }, { status: 400 })
+  }
+
+  if (!privacyAccepted) {
+    return NextResponse.json({ error: 'Please accept the privacy notice before applying.' }, { status: 400 })
   }
 
   if (!(resume instanceof File) || resume.size === 0) {
@@ -70,6 +98,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'This role is not accepting public applications.' }, { status: 403 })
   }
 
+  const supabaseAdmin = createServerSupabaseAdminClient()
+  const capacity = await checkWorkspaceCapacity({
+    supabase: supabaseAdmin,
+    workspaceId: job.workspace_id,
+    feature: 'candidates',
+  })
+
+  if (!capacity.ok) {
+    return NextResponse.json({ error: capacity.message }, { status: 402 })
+  }
+
   const duplicate = await supabase
     .from('candidates')
     .select('id', { count: 'exact', head: true })
@@ -81,7 +120,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You already applied for this role.' }, { status: 409 })
   }
 
-  const supabaseAdmin = createServerSupabaseAdminClient()
   const safeName = resume.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const path = `${user.id}/${jobId}/applications/${Date.now()}_${safeName}`
   const bytes = await resume.arrayBuffer()
@@ -117,6 +155,9 @@ export async function POST(req: Request) {
         status: 'applied',
         location: location || null,
         source: 'career-site',
+        consent_accepted_at: new Date().toISOString(),
+        consent_version: CONSENT_VERSION,
+        data_retention_until: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
       },
     ])
     .select('id')
@@ -131,6 +172,30 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: insert.error.message }, { status: 500 })
   }
+
+  await recordUsageEvent(supabaseAdmin, {
+    workspaceId: job.workspace_id,
+    userId: user.id,
+    feature: 'candidates',
+    metadata: {
+      source: 'career-site',
+      jobId,
+      applicationId: insert.data.id,
+      ip: getClientIp(req),
+    },
+  })
+
+  await recordAuditLog(supabaseAdmin, {
+    workspaceId: job.workspace_id,
+    actorUserId: user.id,
+    action: 'candidate.application_submitted',
+    targetType: 'candidate',
+    targetId: insert.data.id,
+    metadata: {
+      jobId,
+      source: 'career-site',
+    },
+  })
 
   return NextResponse.json({
     ok: true,
