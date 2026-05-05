@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ArrowRight, Search } from 'lucide-react'
+import { ArrowRight, Loader2, Play, RefreshCcw, Search } from 'lucide-react'
 import {
   AdminPageHeader,
   AdminPill,
   adminInputClassName,
+  adminPrimaryButtonClassName,
   adminSecondaryButtonClassName,
   adminSelectClassName,
 } from '@/components/admin/AdminPrimitives'
@@ -35,6 +36,21 @@ type MetricItem = {
   hint: string
 }
 
+async function fetchWorkspaceCandidatesData(supabase: ReturnType<typeof createClient>) {
+  const [jobsRes, candidatesRes] = await Promise.all([
+    supabase.from('jobs').select('*').order('created_at', { ascending: false }),
+    supabase.from('candidates').select('*').order('created_at', { ascending: false }),
+  ])
+
+  if (jobsRes.error) throw jobsRes.error
+  if (candidatesRes.error) throw candidatesRes.error
+
+  return {
+    jobs: (jobsRes.data ?? []) as JobRecord[],
+    candidates: (candidatesRes.data ?? []) as CandidateRecord[],
+  }
+}
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
   return 'Something went wrong.'
@@ -52,6 +68,9 @@ export default function AdminCandidatesPage() {
   const [jobFilter, setJobFilter] = useState<'all' | string>('all')
   const [stageFilter, setStageFilter] = useState<'all' | CandidateStage>('all')
   const [scoreFilter, setScoreFilter] = useState<ScoreFilter>('all')
+  const [refreshing, setRefreshing] = useState(false)
+  const [processingQueue, setProcessingQueue] = useState(false)
+  const [retryingFailed, setRetryingFailed] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -60,16 +79,9 @@ export default function AdminCandidatesPage() {
       setLoading(true)
 
       try {
-        const [jobsRes, candidatesRes] = await Promise.all([
-          supabase.from('jobs').select('*').order('created_at', { ascending: false }),
-          supabase.from('candidates').select('*').order('created_at', { ascending: false }),
-        ])
-
-        if (jobsRes.error) throw jobsRes.error
-        if (candidatesRes.error) throw candidatesRes.error
-
-        setJobs((jobsRes.data ?? []) as JobRecord[])
-        setCandidates((candidatesRes.data ?? []) as CandidateRecord[])
+        const data = await fetchWorkspaceCandidatesData(supabase)
+        setJobs(data.jobs)
+        setCandidates(data.candidates)
       } catch (error: unknown) {
         setToast({ open: true, type: 'error', message: getErrorMessage(error) })
       } finally {
@@ -77,8 +89,29 @@ export default function AdminCandidatesPage() {
       }
     }
 
-    load()
+    void load()
   }, [authLoading, supabase, user])
+
+  const loadWorkspaceData = async (options?: { silent?: boolean }) => {
+    if (!user) return
+
+    if (options?.silent) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+
+    try {
+      const data = await fetchWorkspaceCandidatesData(supabase)
+      setJobs(data.jobs)
+      setCandidates(data.candidates)
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
 
   const jobsById = useMemo(() => {
     return jobs.reduce<Record<string, JobRecord>>((accumulator, job) => {
@@ -160,11 +193,124 @@ export default function AdminCandidatesPage() {
   const hasActiveFilters =
     search.trim().length > 0 || jobFilter !== 'all' || stageFilter !== 'all' || scoreFilter !== 'all'
 
+  const queuedJobIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        candidates
+          .filter((candidate) => candidate.processing_status === 'queued')
+          .map((candidate) => candidate.job_id)
+          .filter(Boolean)
+      )
+    )
+  }, [candidates])
+
+  const failedJobIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        candidates
+          .filter((candidate) => candidate.processing_status === 'failed')
+          .map((candidate) => candidate.job_id)
+          .filter(Boolean)
+      )
+    )
+  }, [candidates])
+
   const resetFilters = () => {
     setSearch('')
     setJobFilter('all')
     setStageFilter('all')
     setScoreFilter('all')
+  }
+
+  const runWorkspaceQueue = async () => {
+    if (queuedJobIds.length === 0) {
+      setToast({ open: true, type: 'error', message: 'No queued candidates found.' })
+      return
+    }
+
+    setProcessingQueue(true)
+
+    try {
+      let totalProcessed = 0
+
+      for (const jobId of queuedJobIds) {
+        while (true) {
+          const response = await fetch('/api/candidates/process-queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId, limit: 10 }),
+          })
+
+          const payload = (await response.json().catch(() => null)) as { processed?: number; error?: string } | null
+
+          if (!response.ok) {
+            throw new Error(payload?.error ?? 'Could not process queued candidates.')
+          }
+
+          const processedNow = Number(payload?.processed ?? 0)
+          totalProcessed += processedNow
+
+          if (processedNow === 0) break
+        }
+      }
+
+      await loadWorkspaceData({ silent: true })
+      setToast({
+        open: true,
+        type: 'success',
+        message:
+          totalProcessed > 0
+            ? `AI processing completed for ${totalProcessed} candidate(s).`
+            : 'No queued candidates left to process.',
+      })
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setProcessingQueue(false)
+    }
+  }
+
+  const retryWorkspaceFailed = async () => {
+    if (failedJobIds.length === 0) {
+      setToast({ open: true, type: 'error', message: 'No failed candidates found.' })
+      return
+    }
+
+    setRetryingFailed(true)
+
+    try {
+      let totalRetried = 0
+
+      for (const jobId of failedJobIds) {
+        const response = await fetch('/api/candidates/retry-failed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        })
+
+        const payload = (await response.json().catch(() => null)) as { retried?: number; error?: string } | null
+
+        if (!response.ok) {
+          throw new Error(payload?.error ?? 'Could not retry failed candidates.')
+        }
+
+        totalRetried += Number(payload?.retried ?? 0)
+      }
+
+      await loadWorkspaceData({ silent: true })
+      setToast({
+        open: true,
+        type: 'success',
+        message:
+          totalRetried > 0
+            ? `${totalRetried} failed candidate(s) moved back to queue.`
+            : 'No failed candidates needed retry.',
+      })
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setRetryingFailed(false)
+    }
   }
 
   return (
@@ -174,11 +320,40 @@ export default function AdminCandidatesPage() {
       <AdminPageHeader
         eyebrow="Candidates"
         title="Candidate pipeline"
-        description="Filter by stage, compare scores, and open the right profile faster."
+        description="Filter by stage, compare scores, and process queued candidates without jumping into a specific job first."
         actions={
-          <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
-            Jobs
-          </Link>
+          <>
+            <button
+              type="button"
+              onClick={() => void loadWorkspaceData({ silent: true })}
+              disabled={refreshing || loading}
+              className={adminSecondaryButtonClassName}
+            >
+              {refreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={runWorkspaceQueue}
+              disabled={processingQueue || stats.queued === 0}
+              className={`${adminPrimaryButtonClassName} disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {processingQueue ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+              Run AI queue
+            </button>
+            <button
+              type="button"
+              onClick={retryWorkspaceFailed}
+              disabled={retryingFailed || failedJobIds.length === 0}
+              className={`${adminSecondaryButtonClassName} disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {retryingFailed ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+              Retry failed
+            </button>
+            <Link href="/admin/jobs" className={adminSecondaryButtonClassName}>
+              Jobs
+            </Link>
+          </>
         }
       />
 
