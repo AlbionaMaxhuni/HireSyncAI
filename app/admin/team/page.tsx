@@ -336,8 +336,15 @@ export default function AdminTeamPage() {
     setRemovingMemberId(member.id)
 
     try {
-      const { error } = await supabase.from('workspace_members').delete().eq('id', member.id)
-      if (error) throw error
+      const response = await fetch(`/api/workspace/members/${member.id}`, {
+        method: 'DELETE',
+      })
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Could not remove team member.')
+      }
 
       setMembers((previous) => previous.filter((item) => item.id !== member.id))
       setToast({ open: true, type: 'success', message: 'Team member removed.' })

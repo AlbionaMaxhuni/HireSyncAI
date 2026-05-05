@@ -39,6 +39,8 @@ const primaryNav: NavItem[] = [
   { label: 'Settings', icon: Settings, href: '/admin/settings' },
 ]
 
+const mobileNav: NavItem[] = primaryNav.filter((item) => item.href !== '/admin/settings')
+
 function isActive(pathname: string, href: string) {
   if (href === '/admin') return pathname === '/admin'
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -67,6 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const initials = getInitials(fullName)
   const workspaceName = workspace?.name || 'Hiring workspace'
   const workspaceRole = formatWorkspaceRole(workspace?.membershipRole)
+  const settingsActive = isActive(pathname, '/admin/settings')
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -75,7 +78,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-4 py-5 md:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-[248px] overflow-y-auto border-r border-slate-200 bg-white px-4 py-5 md:flex md:flex-col">
         <div className="px-3">
           <Logo />
         </div>
@@ -128,8 +131,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           <div className="mt-3 rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
             <Link
+              href="/admin/settings"
+              className={[
+                'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black transition',
+                settingsActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50',
+              ].join(' ')}
+            >
+              <Settings size={16} className={settingsActive ? 'text-white' : 'text-slate-400'} />
+              Settings
+            </Link>
+            <Link
               href="/"
-              className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+              className="mt-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
             >
               <House size={16} className="text-slate-400" />
               Public portal
@@ -158,6 +171,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact />
 
+            <Link
+              href="/admin/settings"
+              className={[
+                'inline-flex items-center gap-2 rounded-[10px] border px-3 py-2 text-sm font-black transition',
+                settingsActive
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white',
+              ].join(' ')}
+              aria-label="Open settings"
+            >
+              <Settings size={15} />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
+
             <details className="group relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm">
                 <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-[11px] font-black text-white">
@@ -174,6 +201,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </div>
 
                 <div className="mt-2 space-y-1">
+                  <Link
+                    href="/admin/settings"
+                    className={[
+                      'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black transition',
+                      settingsActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    <Settings size={16} className={settingsActive ? 'text-white' : 'text-slate-400'} />
+                    Settings
+                  </Link>
                   <Link
                     href="/"
                     className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
@@ -204,8 +241,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/80 bg-white/92 px-2 py-2 backdrop-blur-xl md:hidden">
-        <div className="grid grid-cols-6 gap-1">
-          {primaryNav.map((item) => {
+        <div className="grid grid-cols-5 gap-1">
+          {mobileNav.map((item) => {
             const Icon = item.icon
             const active = isActive(pathname, item.href)
 

@@ -4,6 +4,7 @@ import { isJobPublic } from '@/lib/hiring'
 import { getClientIp, checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
 import { checkWorkspaceCapacity, recordAuditLog, recordUsageEvent } from '@/lib/saas'
 import { createServerSupabaseAdminClient, getOptionalServerUser } from '@/lib/server-auth'
+import { isValidEmail } from '@/lib/validation'
 
 export const runtime = 'nodejs'
 const MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024
@@ -62,6 +63,10 @@ export async function POST(req: Request) {
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required.' }, { status: 400 })
+  }
+
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 })
   }
 
   if (!privacyAccepted) {

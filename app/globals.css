@@ -14,8 +14,15 @@
 
 html {
   height: 100%;
+  font-size: 15px;
   scroll-behavior: smooth;
   color-scheme: light;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
 }
 
 body {

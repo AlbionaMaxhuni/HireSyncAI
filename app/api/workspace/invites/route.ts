@@ -2,13 +2,10 @@ import { NextResponse } from 'next/server'
 import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
 import { checkWorkspaceCapacity, recordAuditLog } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
+import { isValidEmail, normalizeEmail } from '@/lib/validation'
 import type { WorkspaceInviteRecord } from '@/lib/workspace'
 
 export const runtime = 'nodejs'
-
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase()
-}
 
 export async function POST(req: Request) {
   const { supabase, user, role, workspace } = await getOptionalServerUserWithRole()
@@ -32,8 +29,36 @@ export async function POST(req: Request) {
   const email = normalizeEmail(String(body?.email ?? ''))
   const inviteRole = body?.role === 'recruiter' ? 'recruiter' : 'recruiter'
 
-  if (!email || !email.includes('@')) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'A valid teammate email is required.' }, { status: 400 })
+  }
+
+  const [{ data: existingMember, error: existingMemberError }, { data: existingInvite, error: existingInviteError }] =
+    await Promise.all([
+      supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', email)
+        .eq('status', 'active')
+        .maybeSingle(),
+      supabase
+        .from('workspace_invites')
+        .select('id,expires_at')
+        .eq('workspace_id', workspace.id)
+        .eq('email', email)
+        .is('accepted_at', null)
+        .order('created_at', { ascending: false })
+        .maybeSingle(),
+    ])
+
+  if (existingMemberError) return NextResponse.json({ error: existingMemberError.message }, { status: 500 })
+  if (existingInviteError) return NextResponse.json({ error: existingInviteError.message }, { status: 500 })
+  if (existingMember) {
+    return NextResponse.json({ error: 'This teammate already has workspace access.' }, { status: 409 })
+  }
+  if (existingInvite && (!existingInvite.expires_at || new Date(existingInvite.expires_at).getTime() >= Date.now())) {
+    return NextResponse.json({ error: 'A pending invite already exists for this email.' }, { status: 409 })
   }
 
   const capacity = await checkWorkspaceCapacity({

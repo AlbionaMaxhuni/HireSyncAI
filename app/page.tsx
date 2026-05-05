@@ -152,6 +152,29 @@ export default async function LandingPage() {
           )}
         </div>
       </section>
+
+      <section className="mt-6 grid gap-4 md:grid-cols-3">
+        {[
+          {
+            title: 'Publish roles clearly',
+            description: 'Keep roles public, readable, and easy to review before a candidate ever reaches login.',
+          },
+          {
+            title: 'Review candidates faster',
+            description: 'Move from uploaded CVs to a cleaner shortlist without juggling scattered notes and files.',
+          },
+          {
+            title: 'Keep the team aligned',
+            description: 'Jobs, candidates, invites, and pipeline status stay inside one focused hiring workspace.',
+          },
+        ].map((item) => (
+          <div key={item.title} className="rounded-[10px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">For hiring teams</div>
+            <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">{item.title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{item.description}</p>
+          </div>
+        ))}
+      </section>
     </PortalShell>
   )
 }

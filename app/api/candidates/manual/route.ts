@@ -3,6 +3,7 @@ import { analyzeCandidateForRole } from '@/lib/ai'
 import { checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
 import { checkWorkspaceCapacity, recordAuditLog, recordUsageEvent } from '@/lib/saas'
 import { getOptionalServerUserWithRole } from '@/lib/server-auth'
+import { isValidEmail } from '@/lib/validation'
 import type { CandidateRecord } from '@/lib/hiring'
 
 export const runtime = 'nodejs'
@@ -44,6 +45,9 @@ export async function POST(req: Request) {
   if (!jobId) return NextResponse.json({ error: 'Job is required.' }, { status: 400 })
   if (!fullName) return NextResponse.json({ error: 'Candidate name is required.' }, { status: 400 })
   if (!resumeText) return NextResponse.json({ error: 'Resume text is required.' }, { status: 400 })
+  if (email && !isValidEmail(email)) {
+    return NextResponse.json({ error: 'Candidate email must be valid.' }, { status: 400 })
+  }
 
   const { data: job, error: jobError } = await supabase
     .from('jobs')

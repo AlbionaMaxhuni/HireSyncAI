@@ -1,6 +1,6 @@
 # HireSync AI
 
-HireSync AI is a full-stack hiring platform that combines a public candidate experience with a private admin workspace for recruiters. The goal is to reduce manual CV screening, keep the hiring pipeline organized, and make the product feel polished for both candidates and companies.
+HireSync AI is a full-stack hiring platform with two clear surfaces: a public jobs experience for candidates and a private hiring workspace for recruiters. The goal is to keep the candidate flow simple, reduce manual CV screening, and help small hiring teams stay organized without bloated enterprise complexity.
 
 ## Live Demo
 
@@ -39,7 +39,7 @@ The app supports two connected flows:
 - Workspace team invites
 - Candidate and team outreach helpers
 - Analytics overview for jobs, notes, and candidate stages
-- SaaS foundation: plan limits, audit logs, usage events, rate limits, Stripe checkout foundation
+- Operational foundation: audit logs, usage events, rate limits, and workspace-level protection
 - Privacy foundation: candidate consent, data retention fields, privacy and terms pages
 
 ## Tech Stack
@@ -49,7 +49,7 @@ The app supports two connected flows:
 - Database/Auth/Storage: Supabase
 - AI Integration: OpenRouter
 - Optional Email Delivery: Resend
-- Billing foundation: Stripe Checkout and Stripe webhooks
+- Optional Billing Foundation: Stripe Checkout and Stripe webhooks
 - Deployment: Vercel
 
 ## Database And Security Notes
@@ -136,17 +136,22 @@ npm run dev
 If the optional email variables are missing, the app can still be used with the manual draft/copy communication flow.
 If the Stripe variables are missing, the app keeps usage visible but checkout will stay disabled with a clear error.
 
-## SaaS Readiness Notes
+## Product Readiness Notes
 
-The app includes production-oriented foundations:
+The current product is focused on the hiring workflow itself, not on packaging every possible SaaS feature into the UI.
 
-- route-level rate limits for uploads, AI processing, email, billing, jobs, candidates, and invites
-- plan limits for jobs, candidates, team seats, and AI screenings
-- audit logging for key workspace actions
-- candidate privacy consent and data retention fields
-- Stripe Checkout and webhook routes for subscription upgrades
+- the active UI is centered on jobs, applications, candidates, team access, analytics, and settings
+- billing routes still exist as optional backend foundation, but billing is not part of the main active product flow
+- route-level rate limits protect uploads, AI processing, email, jobs, candidates, invites, and sensitive actions
+- audit logging covers key workspace actions
+- candidate privacy consent and retention fields are included
 
-Before selling this as a live product, configure real provider credentials, verify the sending email domain, connect Stripe products/prices, and run all Supabase migrations in production.
+Before using this as a live customer-facing product, you should:
+
+- configure real provider credentials
+- verify the sending email domain if using email delivery
+- run all Supabase migrations in production
+- complete the manual smoke pass in [`docs/manual-smoke-checklist.md`](docs/manual-smoke-checklist.md)
 
 ## Demo Preparation
 
@@ -172,4 +177,4 @@ npm run lint
 npm run build
 ```
 
-The live deployment URL was also checked and returned HTTP `200` on April 24, 2026.
+The live deployment URL also returned HTTP `200` on April 24, 2026.

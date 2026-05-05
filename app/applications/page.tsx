@@ -64,7 +64,10 @@ export default async function ApplicationsPage({
     const stage = normalizeCandidateStage(application.status)
     return stage === 'screening' || stage === 'interview' || stage === 'final'
   }).length
-  const queuedCount = applications.filter((application) => application.processing_status === 'queued').length
+  const decidedCount = applications.filter((application) => {
+    const stage = normalizeCandidateStage(application.status)
+    return stage === 'hired' || stage === 'rejected'
+  }).length
 
   return (
     <PortalShell>
@@ -106,7 +109,7 @@ export default async function ApplicationsPage({
           {[
             ['Applications', applications.length],
             ['In progress', inProgressCount],
-            ['Queue', queuedCount],
+            ['Decided', decidedCount],
           ].map(([label, value]) => (
             <div key={label} className="px-5 py-4">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
