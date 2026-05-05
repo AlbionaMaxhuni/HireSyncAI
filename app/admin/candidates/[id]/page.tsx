@@ -10,6 +10,7 @@ import {
   Clock3,
   Copy,
   Download,
+  Pencil,
   Loader2,
   Mail,
   MapPin,
@@ -17,6 +18,7 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  Trash2,
   UserRound,
 } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
@@ -58,6 +60,10 @@ export default function AdminCandidateProfilePage() {
   const [newNote, setNewNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [submittingNote, setSubmittingNote] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteContent, setEditingNoteContent] = useState('')
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null)
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [openingResume, setOpeningResume] = useState(false)
   const [updatingStage, setUpdatingStage] = useState(false)
   const [emailTemplateStage, setEmailTemplateStage] = useState<CandidateStage>('applied')
@@ -192,6 +198,74 @@ export default function AdminCandidateProfilePage() {
       setToast({ open: true, type: 'error', message: getErrorMessage(error) })
     } finally {
       setOpeningResume(false)
+    }
+  }
+
+  const startEditingNote = (note: CandidateNoteRecord) => {
+    setEditingNoteId(note.id)
+    setEditingNoteContent(note.content)
+  }
+
+  const cancelEditingNote = () => {
+    setEditingNoteId(null)
+    setEditingNoteContent('')
+  }
+
+  const saveEditedNote = async (noteId: string) => {
+    const nextContent = editingNoteContent.trim()
+
+    if (!nextContent) {
+      setToast({ open: true, type: 'error', message: 'Note content cannot be empty.' })
+      return
+    }
+
+    setSavingNoteId(noteId)
+
+    try {
+      const { data, error } = await supabase
+        .from('candidate_notes')
+        .update({ content: nextContent })
+        .eq('id', noteId)
+        .select('*')
+        .single()
+
+      if (error) throw error
+
+      setNotes((previous) =>
+        previous.map((note) => (note.id === noteId ? (data as CandidateNoteRecord) : note))
+      )
+      setEditingNoteId(null)
+      setEditingNoteContent('')
+      setToast({ open: true, type: 'success', message: 'Note updated.' })
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setSavingNoteId(null)
+    }
+  }
+
+  const deleteNote = async (noteId: string) => {
+    const confirmed = confirm('Delete this note?')
+    if (!confirmed) return
+
+    setDeletingNoteId(noteId)
+
+    try {
+      const { error } = await supabase.from('candidate_notes').delete().eq('id', noteId)
+      if (error) throw error
+
+      setNotes((previous) => previous.filter((note) => note.id !== noteId))
+
+      if (editingNoteId === noteId) {
+        setEditingNoteId(null)
+        setEditingNoteContent('')
+      }
+
+      setToast({ open: true, type: 'success', message: 'Note deleted.' })
+    } catch (error: unknown) {
+      setToast({ open: true, type: 'error', message: getErrorMessage(error) })
+    } finally {
+      setDeletingNoteId(null)
     }
   }
 
@@ -593,9 +667,60 @@ export default function AdminCandidateProfilePage() {
                       <div className="text-sm font-black text-slate-900">
                         {note.user_email ? note.user_email.split('@')[0] : 'Team member'}
                       </div>
-                      <div className="text-xs font-semibold text-slate-500">{new Date(note.created_at).toLocaleString()}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs font-semibold text-slate-500">{new Date(note.created_at).toLocaleString()}</div>
+                        {editingNoteId === note.id ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void saveEditedNote(note.id)}
+                              disabled={savingNoteId === note.id || !editingNoteContent.trim()}
+                              className="inline-flex items-center gap-1 rounded-[8px] bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {savingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditingNote}
+                              className="inline-flex items-center gap-1 rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingNote(note)}
+                              className="inline-flex items-center gap-1 rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                            >
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void deleteNote(note.id)}
+                              disabled={deletingNoteId === note.id}
+                              className="inline-flex items-center gap-1 rounded-[8px] border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {deletingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">{note.content}</p>
+                    {editingNoteId === note.id ? (
+                      <textarea
+                        value={editingNoteContent}
+                        onChange={(event) => setEditingNoteContent(event.target.value)}
+                        rows={4}
+                        className="mt-3 w-full resize-none rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-slate-900"
+                      />
+                    ) : (
+                      <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">{note.content}</p>
+                    )}
                   </div>
                 ))
               )}
