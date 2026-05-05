@@ -156,6 +156,7 @@ Before using this as a live customer-facing product, you should:
 ## Demo Preparation
 
 The demo plan for the final presentation is in [`docs/demo-plan.md`](docs/demo-plan.md).
+The manual smoke checklist is in [`docs/manual-smoke-checklist.md`](docs/manual-smoke-checklist.md).
 
 Recommended routes for the presentation:
 
@@ -177,4 +178,5 @@ npm run lint
 npm run build
 ```
 
-The live deployment URL also returned HTTP `200` on April 24, 2026.
+Latest local verification pass completed on May 5, 2026.
+The live deployment URL also returned HTTP `200` on May 5, 2026.

@@ -1,116 +1,145 @@
 # Demo Plan - HireSync AI
 
-## 1. Çka është projekti dhe kujt i shërben
+## 1. Cka eshte projekti dhe kujt i sherben
 
-Projekti im quhet **HireSync AI**.  
-Ky është një aplikacion për hiring/rekrutim që i ndihmon kompanitë ose ekipet e HR-it me i menaxhu vendet e punës, aplikimet dhe kandidatët në një vend.
+HireSync AI eshte nje platforme full-stack per hiring qe ka dy siperfaqe kryesore:
 
-Ideja kryesore e projektit është kjo:
-- kandidati mundet me i pa pozitat e hapura dhe me apliku ma lehtë
-- admini ose kompania mundet me i menaxhu kandidatët ma mirë
-- AI përdoret si ndihmë për me i analizu CV-të dhe me e lehtësu filtrimin fillestar
+- nje eksperience publike per kandidatet qe duan te shohin pozitat dhe te aplikojne
+- nje workspace privat per admin ose rekrutues qe menaxhojne job-et, kandidatet dhe pipeline-in
 
-Ky projekt i shërben sidomos:
-- kompanive që pranojnë shumë aplikime
-- ekipeve të HR-it
-- rekruterëve që duan një mënyrë ma të organizuar për me i trajtu kandidatët
+Projekti i sherben sidomos:
+
+- ekipeve te HR-it
+- rekrutuesve
+- kompanive te vogla ose ne rritje qe duan proces me te organizuar te hiring-ut
+
+Vlera kryesore e produktit eshte qe e mban procesin e kandidatit te thjeshte, ndersa ekipit te hiring-ut i jep nje vend te vetem per menaxhim, screening dhe koordinim.
 
 **Live URL:** https://hire-sync-ai-nine.vercel.app
 
-## 2. Flow kryesor që do ta demonstroj
+## 2. Flow kryesor qe do ta demonstroj
 
-Në demo nuk dua me i tregu krejt pjesët e projektit, por dua me u fokusu në flow-n kryesor që e shpjegon më së miri vlerën e aplikacionit.
+Ne demo do te fokusohem te flow-i me i forte i produktit dhe jo te cdo faqe ne menyre te barabarte.
 
-### Hapi 1 - Landing page dhe jobs
-- Fillimisht do ta hap faqen kryesore.
-- Do të tregoj që përdoruesi mundet me i pa job-et publike.
-- Pastaj do të kaloj te faqja `/jobs` për me tregu listën e pozitave.
+### Pjesa 1 - Public hiring flow
 
-### Hapi 2 - Aplikimi si kandidat
-- Do ta hap një pozitë të publikuar.
-- Do ta tregoj pjesën ku kandidati mundet me apliku.
-- Këtu do ta shpjegoj që kandidati nuk ka nevojë menjëherë me u futë në sistem vetëm për me i pa pozitat.
+- Hap faqen `/` dhe shpjegoj shkurt cfare zgjidh produkti
+- Kaloj te `/jobs` dhe tregoj pozitat e publikuara
+- Hap nje job detail page dhe tregoj si kandidati mund ta kuptoje rolin dhe si aplikohet
+- Permend qe kandidati nuk ka nevoje te hyje ne sistem vetem per te pare pozitat
 
-### Hapi 3 - Statusi i aplikimeve
-- Pastaj do ta tregoj faqen `/applications`.
-- Këtu do të shpjegoj që kandidati mundet me e pa statusin e aplikimit të vet.
-- Kjo pjesë e bën eksperiencën më të qartë për kandidatin.
+### Pjesa 2 - Candidate experience
 
-### Hapi 4 - Admin workspace
-- Pastaj do të kaloj te `/admin`.
-- Do ta tregoj dashboard-in dhe faktin që admini i ka të gjitha në një vend.
+- Tregoj qe kandidati mund te aplikoje me CV
+- Hap `/applications` dhe tregoj qe kandidati e sheh statusin e aplikimit ne menyre te thjeshte
+- E lidh kete me vleren e produktit: transparence me e mire dhe eksperience me e qarte per kandidatin
 
-### Hapi 5 - Menaxhimi i job-eve
-- Te `/admin/jobs` do të tregoj si krijohen job-et.
-- Do të përmend edhe statuset si `draft` dhe `published`.
-- Kjo e tregon që job-et nuk dalin menjëherë publike pa kontroll.
+### Pjesa 3 - Admin workspace
 
-### Hapi 6 - Kandidatët dhe AI screening
-- Te një job i caktuar ose te `/admin/candidates` do t’i tregoj kandidatët.
-- Këtu do ta shpjegoj:
-  - score
-  - skills
-  - summary
-  - red flags
-  - interview questions
-- Kjo është pjesa ku shihet përdorimi i AI-it në projekt.
+- Kaloj te `/admin` dhe tregoj dashboard-in
+- Hap `/admin/jobs` dhe tregoj krijimin ose menaxhimin e nje job-i me state si `draft` dhe `published`
+- Hap `/admin/candidates` ose nje faqe job-i specifik dhe tregoj kandidatet, score, skills, summary, red flags dhe interview questions
+- Permend qe kjo eshte pjesa ku AI e ndihmon screening-un fillestar
 
-### Hapi 7 - Team dhe analytics
-- Në fund do të tregoj shkurt `/admin/team` dhe `/admin/analytics`.
-- Këtu do të përmend që projekti nuk është vetëm për një admin, por është menduar si sistem për kompani reale.
+### Pjesa 4 - Team dhe analytics
 
-## 3. Cilat pjesë teknike do t’i shpjegoj shkurt
+- Hap `/admin/team` per te treguar se sistemi mbeshtet ekip dhe jo vetem nje admin te vetem
+- Hap `/admin/analytics` per te treguar nje overview te pipeline-it dhe aktivitetit te hiring-ut
 
-Pjesët teknike nuk dua me i zgjat shumë, por do t’i përmend këto:
+## 3. Si do ta ndaj prezentimin ne 5-7 minuta
 
-- Projekti është ndërtuar me **Next.js**
-- Për databazë, auth dhe storage kam përdorur **Supabase**
-- Për analizën e CV-ve kam përdorur **AI integration**
-- Projekti i ka të ndara pjesët për kandidatë dhe admin
-- Të dhënat janë të organizuara me `workspace`, `jobs`, `candidates` dhe `notes`
+### 0:00 - 0:45 | Hyrja
 
-Pra, ideja është me tregu që projekti nuk është vetëm vizual, por ka edhe logjikë reale prapa.
+- Prezantoj shkurt problemin
+- Them cfare eshte HireSync AI
+- Sqaroj kujt i sherben
 
-## 4. Çfarë kam kontrolluar para demos
+### 0:45 - 2:00 | Public flow
 
-Para prezantimit do t’i kontrolloj këto:
+- Homepage
+- Jobs page
+- Job detail page
 
-- README a është i përditësuar
-- `docs/demo-plan.md` a është gati
-- live URL a punon
-- a ekziston të paktën një job i publikuar
-- a ekziston të paktën një kandidat për demo
-- a punon login për admin
-- a punon login për kandidat
-- a hapen faqet kryesore pa error
+### 2:00 - 3:00 | Candidate flow
 
-Kontrollet teknike që i kam bërë:
-- `npm run lint`
-- `npm run build`
+- Application flow
+- Applications page
 
-## 5. Plani B nëse live demo dështon
+### 3:00 - 5:00 | Admin flow
 
-Nëse live demo nuk punon, atëherë do ta përdor këtë plan:
+- Admin dashboard
+- Jobs management
+- Candidate review dhe AI screening
 
-1. Do ta hap projektin lokal me `npm run dev`
-2. Do ta tregoj të njëjtin flow në lokal
-3. Nëse ka problem me internet ose login, do të kem screenshot-e të gatshme nga:
-   - faqja kryesore
-   - jobs page
-   - admin dashboard
-   - candidates page
-   - analytics page
-4. Nëse duhet, do ta shpjegoj logjikën e projektit edhe përmes kodit dhe strukturës së databazës
+### 5:00 - 5:45 | Team dhe analytics
 
-## 6. Si dua ta prezantoj
+- Team access
+- Analytics overview
 
-Gjatë prezantimit dua:
-- me fol qartë dhe shkurt
-- me u fokusu te pjesa kryesore e projektit
-- mos me humb në detaje të tepërta
-- me tregu qartë vlerën praktike të aplikacionit
+### 5:45 - 6:30 | Technical highlights dhe mbyllja
 
-Qëllimi im është që profesori ta kuptojë:
-- çfarë problemi zgjidh projekti
-- si funksionon në praktikë
-- pse kjo ide mundet me qenë e dobishme për kompani reale
+- Next.js, Supabase, AI integration
+- Pse struktura me workspaces e ben projektin me realist
+- Mbyllje me vleren praktike te produktit
+
+Ky plan me lejon ta mbaj demo-n brenda 5-7 minutave pa humbur ne detaje te panevojshme.
+
+## 4. Cilat pjese teknike do t'i shpjegoj shkurt
+
+Do t'i permend shkurt vetem pjeset qe japin peshe teknike pa e kthyer prezantimin ne leksion kodi:
+
+- frontend-i eshte ndertuar me Next.js App Router
+- backend-i eshte realizuar me Route Handlers
+- databaza, auth dhe storage menaxhohen nga Supabase
+- projekti ndahet qarte ne candidate flow dhe admin workspace
+- AI perdoret per resume screening dhe ndihme ne vleresimin fillestar te kandidateve
+- struktura me `workspaces`, `jobs`, `candidates` dhe `candidate_notes` e ben produktin me te afert me nje rast real
+
+## 5. Cfare kam kontrolluar para demos
+
+Para prezantimit kam pergatitur ose kontrolluar keto pika:
+
+- README eshte i perditesuar
+- `docs/demo-plan.md` eshte i pergatitur
+- live URL eshte vendosur ne dokumentacion
+- ekziston nje checklist manuale ne `docs/manual-smoke-checklist.md`
+- flow-et kryesore te produktit jane percaktuar qarte per demo
+- `npm run lint` kalon
+- `npm run build` kalon
+
+Para prezantimit final do te kontrolloj edhe praktikisht:
+
+- qe ka te pakten nje job te publikuar
+- qe ekziston nje kandidat per demo
+- qe login punon per admin dhe kandidat
+- qe faqet kryesore hapen pa error
+- qe mobile navigation funksionon ne faqet admin
+
+## 6. Plani B nese live demo deshton
+
+Nese live demo ka problem, do te perdor kete fallback:
+
+1. E hap projektin lokal me `npm run dev`
+2. E ndjek te njejtin flow ne lokal
+3. Nese ka problem me internet, login ose seed data, mbeshtetem te screenshot-et e pergatitura paraprakisht
+4. Nese duhet, e shpjegoj logjiken e produktit permes kodit, routes kryesore dhe struktures se databazes
+
+Screenshot-et qe duhet t'i kem gati:
+
+- homepage
+- jobs page
+- applications page
+- admin dashboard
+- candidates page
+- analytics page
+
+## 7. Cfare dua te percjell gjate prezantimit
+
+Gjate prezantimit dua te jete e qarte qe:
+
+- e di sakte cfare po demonstroj
+- kam zgjedhur flow-in me te mire te produktit
+- projekti eshte i kontrolluar dhe i gatshem per prezantim
+- di ta shpjegoj vleren e produktit dhe pjesen teknike pa humbur ne detaje
+
+Qellimi nuk eshte vetem te tregoj qe aplikacioni ekziston, por te tregoj qe eshte nje produkt i menduar mire dhe i prezantuar ne menyre profesionale.

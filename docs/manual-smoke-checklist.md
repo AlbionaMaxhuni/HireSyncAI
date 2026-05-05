@@ -27,3 +27,35 @@ Use this quick pass before publishing a new build.
 - Confirm privacy and terms links work from the public shell.
 - Run `npm run lint`.
 - Run `npm run build`.
+
+---
+
+# Lista Manuale e Kontrollit
+
+Përdore këtë kontroll të shpejtë para publikimit të një build-i të ri.
+
+## Rrjedha publike
+
+- Hap `/` dhe konfirmo që faqja hyrëse shpjegon si rrjedhën e kandidatit ashtu edhe vlerën për ekipin e rekrutimit.
+- Hap `/jobs` dhe konfirmo që pozitat e publikuara ngarkohen pa ndonjë CTA të prishur.
+- Hap një faqe detajesh të një pozite dhe konfirmo që paneli i aplikimit e shpjegon qartë hyrjen në sistem.
+- Hyr si kandidat dhe dërgo një aplikim me një PDF ose DOCX të vlefshëm.
+- Hap `/applications` dhe konfirmo që shfaqet vetëm informacioni i orientuar për kandidatin.
+
+## Rrjedha e adminit
+
+- Hyr si admin dhe hap `/admin`.
+- Krijo një pozitë draft dhe më pas publikoje.
+- Hap `/admin/jobs/[id]` dhe shto një kandidat manual me një email të vlefshëm.
+- Provo një email të pavlefshëm për kandidat manual dhe konfirmo që validimi e bllokon.
+- Hap `/admin/team` dhe krijo një ftesë me një email të vlefshëm.
+- Provo një ftesë të dyfishtë ende në pritje dhe konfirmo që bllokohet.
+- Largo një rekrutues nga workspace dhe konfirmo që veprimi kryhet me sukses.
+- Hap `/admin/settings` dhe konfirmo që nuk ka UI për billing ose upgrade.
+
+## Kontrollet finale
+
+- Konfirmo që navigimi mobil funksionon në `/admin`, `/admin/jobs`, `/admin/candidates`, `/admin/team`, dhe `/admin/settings`.
+- Konfirmo që linket e privatësisë dhe termave funksionojnë nga public shell.
+- Ekzekuto `npm run lint`.
+- Ekzekuto `npm run build`.
