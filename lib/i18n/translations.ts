@@ -522,6 +522,18 @@ const exactTranslations: Record<string, string> = {
   'Where candidates are now': 'Ku janë kandidatët tani',
   Workspace: 'Hapësira',
   'Workspace access': 'Qasje në workspace',
+  'Monitor recent applications and continue candidate review faster.':
+    'Monitoro aplikimet e fundit dhe vazhdo shqyrtimin e kandidatëve më shpejt.',
+  Alerts: 'Njoftime',
+  Notifications: 'Njoftimet',
+  'Recent applications': 'Aplikimet e fundit',
+  'New candidate applications appear here for quick review.':
+    'Aplikimet e reja të kandidatëve shfaqen këtu për shqyrtim të shpejtë.',
+  'Loading notifications...': 'Duke ngarkuar njoftimet...',
+  'No new candidate applications yet.': 'Ende nuk ka aplikime të reja kandidatësh.',
+  'Applied for': 'Aplikuar për',
+  'a role': 'një pozitë',
+  'Active session': 'Sesioni aktiv',
   'Workspace account': 'Llogaria e workspace-it',
   'Workspace invite': 'Ftesë workspace-i',
   'Workspace invite accepted successfully.': 'Ftesa e workspace-it u pranua me sukses.',

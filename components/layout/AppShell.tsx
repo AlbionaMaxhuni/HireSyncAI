@@ -10,7 +10,6 @@ import {
   UserPlus,
   Settings,
   BarChart3,
-  ShieldCheck,
   ChevronDown,
   House,
   LogOut,
@@ -149,48 +148,42 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 hidden w-[248px] overflow-y-auto border-r border-slate-200 bg-white px-4 py-5 md:flex md:flex-col">
-        <div className="px-3">
-          <Logo />
-        </div>
-
-        <div className="mt-4 px-3">
-          <LanguageSwitcher />
-        </div>
-
-        <div className="mt-6 border-y border-slate-200 py-4">
-          <div className="flex items-center gap-3 px-3">
-            <ShieldCheck size={16} className="text-slate-400" />
+      <aside className="fixed inset-y-0 left-0 hidden w-[248px] overflow-hidden border-r border-[#24364f] bg-[linear-gradient(180deg,_#0f172a_0%,_#16243a_55%,_#1d314b_100%)] px-3 py-4 shadow-[8px_0_30px_rgba(15,23,42,0.18)] md:flex md:flex-col">
+        <div className="px-2">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" />
             <div className="min-w-0">
-              <div className="truncate text-sm font-black text-slate-900">{workspaceName}</div>
-              <p className="mt-0.5 text-xs font-semibold text-slate-500">Hiring workspace</p>
+              <div className="text-lg font-black tracking-tight text-white">
+                HireSync<span className="text-blue-400">AI</span>
+              </div>
+              <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-300">
+                Hiring workspace
+              </div>
             </div>
           </div>
         </div>
 
-        <nav className="mt-6 space-y-1">
-          {primaryNav.map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
-          ))}
-        </nav>
-
-        <details className="group mt-auto">
-          <summary className="list-none cursor-pointer rounded-[10px] border border-slate-200 bg-white p-3 transition hover:border-slate-300">
+        <div className="mt-3 overflow-hidden rounded-[14px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_100%)] shadow-[0_16px_40px_rgba(2,6,23,0.28)]">
+          <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(6,182,212,0.08)_100%)] px-3 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-gradient-to-br from-slate-900 via-blue-700 to-cyan-500 text-sm font-black text-white shadow-[0_10px_25px_rgba(37,99,235,0.32)]">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-black text-slate-900">{fullName}</div>
-                <div className="truncate text-xs font-semibold text-slate-500">{email}</div>
+                <div className="truncate text-sm font-black text-white">{fullName}</div>
+                <div className="truncate text-xs font-semibold text-slate-300">{email}</div>
               </div>
-              <ChevronDown size={16} className="text-slate-400" />
             </div>
+          </div>
 
-            <div className="mt-3 flex items-center justify-between rounded-[8px] bg-slate-50 px-3 py-2.5">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  Workspace access
+          <div className="px-3 py-3">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              {t('Workspace access')}
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-[12px] bg-white/95 px-3 py-3">
+              <div className="min-w-0">
+                <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  {t('Active session')}
                 </div>
                 <div className="mt-1 text-sm font-black text-slate-900">{t(`${workspaceRole} session active`)}</div>
               </div>
@@ -198,35 +191,37 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 Live
               </div>
             </div>
-          </summary>
-
-          <div className="mt-3 rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-            <Link
-              href="/admin/settings"
-              className={[
-                'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black transition',
-                settingsActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-            >
-              <Settings size={16} className={settingsActive ? 'text-white' : 'text-slate-400'} />
-              Settings
-            </Link>
-            <Link
-              href="/"
-              className="mt-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-            >
-              <House size={16} className="text-slate-400" />
-              Public portal
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="mt-1 flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-black text-amber-900 transition hover:bg-amber-50"
-            >
-              <LogOut size={16} className="text-amber-700" />
-              Log out
-            </button>
           </div>
-        </details>
+        </div>
+
+        <div className="mt-3 px-2">
+          <div className="inline-flex scale-[0.8] origin-left rounded-[12px] border border-white/10 bg-white/5 p-1 shadow-[0_10px_24px_rgba(2,6,23,0.18)]">
+            <LanguageSwitcher />
+          </div>
+        </div>
+
+        <nav className="mt-3 space-y-0.5">
+          {primaryNav.map((item) => (
+            <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+          ))}
+        </nav>
+
+        <div className="mt-3 space-y-1.5">
+          <Link
+            href="/"
+            className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/8 hover:text-white"
+          >
+            <House size={16} className="text-slate-400" />
+            Public portal
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-[10px] border border-amber-400/20 bg-amber-400/10 px-4 py-2.5 text-left text-sm font-black text-amber-100 transition hover:bg-amber-400/15"
+          >
+            <LogOut size={16} className="text-amber-300" />
+            Log out
+          </button>
+        </div>
       </aside>
 
       <header className="sticky top-0 z-40 border-b border-white/80 bg-white/85 backdrop-blur-xl md:hidden">
@@ -256,12 +251,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     </span>
                   ) : null}
                 </div>
-                <span className="hidden sm:inline">Alerts</span>
+                <span className="hidden sm:inline">{t('Alerts')}</span>
               </summary>
 
               <NotificationDropdown
                 loading={loadingNotifications}
                 recentApplications={recentApplications}
+                t={t}
               />
             </details>
 
@@ -331,9 +327,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto max-w-[1680px]">
             <div className="mb-4 hidden items-center justify-between gap-4 md:flex">
               <div>
-                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Workspace</div>
+                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">{t('Workspace')}</div>
                 <div className="mt-1 text-sm font-semibold text-slate-500">
-                  Monitor recent applications and continue candidate review faster.
+                  {t('Monitor recent applications and continue candidate review faster.')}
                 </div>
               </div>
 
@@ -351,12 +347,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       </span>
                     ) : null}
                   </div>
-                  Alerts
+                  {t('Alerts')}
                 </summary>
 
                 <NotificationDropdown
                   loading={loadingNotifications}
                   recentApplications={recentApplications}
+                  t={t}
                 />
               </details>
             </div>
@@ -394,17 +391,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
 function NotificationDropdown({
   loading,
   recentApplications,
+  t,
 }: {
   loading: boolean
   recentApplications: RecentApplication[]
+  t: (value: string) => string
 }) {
   return (
     <div className="absolute right-0 top-full mt-3 hidden w-[320px] rounded-[10px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
       <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Notifications</div>
-        <div className="mt-2 text-base font-black text-slate-900">Recent applications</div>
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{t('Notifications')}</div>
+        <div className="mt-2 text-base font-black text-slate-900">{t('Recent applications')}</div>
         <div className="mt-1 text-sm font-semibold text-slate-500">
-          New candidate applications appear here for quick review.
+          {t('New candidate applications appear here for quick review.')}
         </div>
       </div>
 
@@ -412,11 +411,11 @@ function NotificationDropdown({
         {loading ? (
           <div className="flex items-center gap-2 rounded-[10px] px-3 py-4 text-sm font-semibold text-slate-500">
             <Loader2 size={15} className="animate-spin" />
-            Loading notifications...
+            {t('Loading notifications...')}
           </div>
         ) : recentApplications.length === 0 ? (
           <div className="rounded-[10px] px-3 py-4 text-sm font-semibold text-slate-500">
-            No new candidate applications yet.
+            {t('No new candidate applications yet.')}
           </div>
         ) : (
           recentApplications.map((item) => (
@@ -429,7 +428,7 @@ function NotificationDropdown({
                 {item.full_name || 'New candidate'}
               </div>
               <div className="mt-1 text-xs font-semibold text-slate-500">
-                Applied for {item.job_title_snapshot || 'a role'}
+                {t('Applied for')} {item.job_title_snapshot || t('a role')}
               </div>
               <div className="mt-1 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
                 {formatRelativeTime(item.created_at)}
@@ -443,7 +442,7 @@ function NotificationDropdown({
         href="/admin/candidates"
         className="mt-2 flex items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
       >
-        Open candidates
+        {t('Open candidates')}
       </Link>
     </div>
   )
@@ -469,15 +468,15 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       href={item.href}
       className={[
-        'group flex items-center gap-3 rounded-[10px] px-4 py-2.5 text-sm font-black transition-all',
+        'group flex items-center gap-3 rounded-[10px] px-4 py-2 text-sm font-black transition-all',
         active
-          ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+          ? 'bg-white text-slate-950 shadow-lg shadow-black/10'
+          : 'text-slate-200 hover:bg-white/8 hover:text-white',
       ].join(' ')}
     >
       <Icon
         size={18}
-        className={active ? 'text-white' : 'text-slate-400 transition group-hover:text-slate-700'}
+        className={active ? 'text-slate-950' : 'text-slate-400 transition group-hover:text-white'}
       />
       {item.label}
     </Link>
