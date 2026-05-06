@@ -40,6 +40,10 @@ type RecentApplication = {
   status: string | null
 }
 
+function getNotificationsSeenKey(workspaceId: string) {
+  return `hiresync-alerts-seen:${workspaceId}`
+}
+
 const primaryNav: NavItem[] = [
   { label: 'Overview', icon: LayoutDashboard, href: '/admin' },
   { label: 'Jobs', icon: Briefcase, href: '/admin/jobs' },
@@ -75,6 +79,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { t } = useLanguage()
   const [loadingNotifications, setLoadingNotifications] = useState(false)
   const [recentApplications, setRecentApplications] = useState<RecentApplication[]>([])
+  const [lastSeenAt, setLastSeenAt] = useState<number>(0)
 
   const fullName = getUserDisplayName(user, 'Hiring Team')
   const email = user?.email ?? 'workspace@hiresync.ai'
@@ -114,10 +119,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
     void loadNotifications()
   }, [supabase, workspace?.id])
 
+  useEffect(() => {
+    if (!workspace?.id || typeof window === 'undefined') {
+      setLastSeenAt(0)
+      return
+    }
+
+    const storedValue = window.localStorage.getItem(getNotificationsSeenKey(workspace.id))
+    const parsedValue = storedValue ? Number(storedValue) : 0
+    setLastSeenAt(Number.isFinite(parsedValue) ? parsedValue : 0)
+  }, [workspace?.id])
+
   const recentApplicationCount = useMemo(() => {
-    const cutoff = Date.now() - 1000 * 60 * 60 * 24
-    return recentApplications.filter((item) => new Date(item.created_at).getTime() >= cutoff).length
-  }, [recentApplications])
+    return recentApplications.filter((item) => new Date(item.created_at).getTime() > lastSeenAt).length
+  }, [lastSeenAt, recentApplications])
+
+  const markNotificationsAsSeen = () => {
+    if (!workspace?.id || typeof window === 'undefined') return
+
+    const now = Date.now()
+    window.localStorage.setItem(getNotificationsSeenKey(workspace.id), String(now))
+    setLastSeenAt(now)
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -219,7 +242,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact />
 
-            <details className="group relative">
+            <details className="group relative" onToggle={(event) => {
+              if ((event.currentTarget as HTMLDetailsElement).open) {
+                markNotificationsAsSeen()
+              }
+            }}>
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white">
                 <div className="relative">
                   <Bell size={15} />
@@ -302,8 +329,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <main className="md:pl-[248px]">
         <div className="w-full p-4 pb-24 md:p-6">
           <div className="mx-auto max-w-[1680px]">
-            <div className="mb-4 hidden items-center justify-end gap-2 md:flex">
-              <details className="group relative">
+            <div className="mb-4 hidden items-center justify-between gap-4 md:flex">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Workspace</div>
+                <div className="mt-1 text-sm font-semibold text-slate-500">
+                  Monitor recent applications and continue candidate review faster.
+                </div>
+              </div>
+
+              <details className="group relative shrink-0" onToggle={(event) => {
+                if ((event.currentTarget as HTMLDetailsElement).open) {
+                  markNotificationsAsSeen()
+                }
+              }}>
                 <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
                   <div className="relative">
                     <Bell size={16} />
