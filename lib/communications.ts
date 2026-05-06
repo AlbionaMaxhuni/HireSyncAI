@@ -13,6 +13,14 @@ type InviteEmailInput = {
   inviterName: string
 }
 
+type AdminApplicationEmailInput = {
+  candidateName: string
+  candidateEmail: string
+  jobTitle: string
+  companyName: string
+  location?: string | null
+}
+
 export function buildMailtoHref(to: string, subject: string, body: string) {
   const params = new URLSearchParams({
     subject,
@@ -139,5 +147,36 @@ If you were not expecting this invitation, you can ignore this message.
 
 Best regards,
 ${safeWorkspaceName}`,
+  }
+}
+
+export function buildAdminNewApplicationEmail({
+  candidateName,
+  candidateEmail,
+  jobTitle,
+  companyName,
+  location,
+}: AdminApplicationEmailInput) {
+  const safeCandidateName = candidateName.trim() || 'A candidate'
+  const safeCandidateEmail = candidateEmail.trim() || 'No email provided'
+  const safeJobTitle = jobTitle.trim() || 'the role'
+  const safeCompanyName = companyName.trim() || 'your hiring workspace'
+  const safeLocation = location?.trim()
+
+  return {
+    subject: `New application for ${safeJobTitle} at ${safeCompanyName}`,
+    body: `Hi,
+
+A new candidate has applied for the ${safeJobTitle} role at ${safeCompanyName}.
+
+Candidate: ${safeCandidateName}
+Email: ${safeCandidateEmail}
+${safeLocation ? `Location: ${safeLocation}\n` : ''}Next step:
+- Open the admin workspace
+- Review the candidate profile
+- Run AI queue processing if the CV is still queued
+
+Best regards,
+HireSync AI`,
   }
 }

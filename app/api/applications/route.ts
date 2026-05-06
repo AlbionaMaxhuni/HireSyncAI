@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserDisplayName } from '@/lib/auth'
+import { buildAdminNewApplicationEmail } from '@/lib/communications'
+import { isEmailDeliveryConfigured, sendTransactionalEmail } from '@/lib/email'
 import { isJobPublic } from '@/lib/hiring'
 import { getClientIp, checkRateLimit, rateLimitHeaders, rateLimitKey } from '@/lib/rate-limit'
 import { checkWorkspaceCapacity, recordAuditLog, recordUsageEvent } from '@/lib/saas'
@@ -201,6 +203,49 @@ export async function POST(req: Request) {
       source: 'career-site',
     },
   })
+
+  if (isEmailDeliveryConfigured() && job.workspace_id) {
+    try {
+      const { data: workspaceMembers, error: workspaceMembersError } = await supabaseAdmin
+        .from('workspace_members')
+        .select('email,status')
+        .eq('workspace_id', job.workspace_id)
+        .eq('status', 'active')
+
+      if (!workspaceMembersError) {
+        const recipients = Array.from(
+          new Set(
+            (workspaceMembers ?? [])
+              .map((member) => String(member.email ?? '').trim().toLowerCase())
+              .filter(Boolean)
+          )
+        )
+
+        if (recipients.length > 0) {
+          const workspaceName =
+            typeof job.workspaces === 'object' && job.workspaces && 'name' in job.workspaces
+              ? (job.workspaces.name as string | null) ?? 'your hiring workspace'
+              : 'your hiring workspace'
+
+          const draft = buildAdminNewApplicationEmail({
+            candidateName: fullName,
+            candidateEmail: email,
+            jobTitle: job.title,
+            companyName: workspaceName,
+            location,
+          })
+
+          await sendTransactionalEmail({
+            to: recipients,
+            subject: draft.subject,
+            text: draft.body,
+          })
+        }
+      }
+    } catch {
+      // Application submission should still succeed even if admin notification fails.
+    }
+  }
 
   return NextResponse.json({
     ok: true,
