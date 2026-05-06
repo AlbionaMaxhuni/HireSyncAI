@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -14,6 +14,8 @@ import {
   ChevronDown,
   House,
   LogOut,
+  Bell,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react'
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher'
@@ -28,6 +30,14 @@ type NavItem = {
   label: string
   href: string
   icon: LucideIcon
+}
+
+type RecentApplication = {
+  id: string
+  full_name: string | null
+  job_title_snapshot?: string | null
+  created_at: string
+  status: string | null
 }
 
 const primaryNav: NavItem[] = [
@@ -63,6 +73,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient())
   const { user, workspace } = useAuth()
   const { t } = useLanguage()
+  const [loadingNotifications, setLoadingNotifications] = useState(false)
+  const [recentApplications, setRecentApplications] = useState<RecentApplication[]>([])
 
   const fullName = getUserDisplayName(user, 'Hiring Team')
   const email = user?.email ?? 'workspace@hiresync.ai'
@@ -70,6 +82,42 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const workspaceName = workspace?.name || 'Hiring workspace'
   const workspaceRole = formatWorkspaceRole(workspace?.membershipRole)
   const settingsActive = isActive(pathname, '/admin/settings')
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!workspace?.id) {
+        setRecentApplications([])
+        return
+      }
+
+      setLoadingNotifications(true)
+
+      try {
+        const { data, error } = await supabase
+          .from('candidates')
+          .select('id,full_name,job_title_snapshot,created_at,status')
+          .eq('workspace_id', workspace.id)
+          .eq('source', 'career-site')
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (error) throw error
+
+        setRecentApplications((data ?? []) as RecentApplication[])
+      } catch {
+        setRecentApplications([])
+      } finally {
+        setLoadingNotifications(false)
+      }
+    }
+
+    void loadNotifications()
+  }, [supabase, workspace?.id])
+
+  const recentApplicationCount = useMemo(() => {
+    const cutoff = Date.now() - 1000 * 60 * 60 * 24
+    return recentApplications.filter((item) => new Date(item.created_at).getTime() >= cutoff).length
+  }, [recentApplications])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -171,6 +219,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact />
 
+            <details className="group relative">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white">
+                <div className="relative">
+                  <Bell size={15} />
+                  {recentApplicationCount > 0 ? (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[9px] font-black text-white">
+                      {Math.min(recentApplicationCount, 9)}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="hidden sm:inline">Alerts</span>
+              </summary>
+
+              <NotificationDropdown
+                loading={loadingNotifications}
+                recentApplications={recentApplications}
+              />
+            </details>
+
             <Link
               href="/admin/settings"
               className={[
@@ -235,6 +302,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <main className="md:pl-[248px]">
         <div className="w-full p-4 pb-24 md:p-6">
           <div className="mx-auto max-w-[1680px]">
+            <div className="mb-4 hidden items-center justify-end gap-2 md:flex">
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                  <div className="relative">
+                    <Bell size={16} />
+                    {recentApplicationCount > 0 ? (
+                      <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[9px] font-black text-white">
+                        {Math.min(recentApplicationCount, 9)}
+                      </span>
+                    ) : null}
+                  </div>
+                  Alerts
+                </summary>
+
+                <NotificationDropdown
+                  loading={loadingNotifications}
+                  recentApplications={recentApplications}
+                />
+              </details>
+            </div>
             {children}
           </div>
         </div>
@@ -264,6 +351,77 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </nav>
     </div>
   )
+}
+
+function NotificationDropdown({
+  loading,
+  recentApplications,
+}: {
+  loading: boolean
+  recentApplications: RecentApplication[]
+}) {
+  return (
+    <div className="absolute right-0 top-full mt-3 hidden w-[320px] rounded-[10px] border border-white/80 bg-white/96 p-2 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl group-open:block">
+      <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-4">
+        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Notifications</div>
+        <div className="mt-2 text-base font-black text-slate-900">Recent applications</div>
+        <div className="mt-1 text-sm font-semibold text-slate-500">
+          New candidate applications appear here for quick review.
+        </div>
+      </div>
+
+      <div className="mt-2 space-y-1">
+        {loading ? (
+          <div className="flex items-center gap-2 rounded-[10px] px-3 py-4 text-sm font-semibold text-slate-500">
+            <Loader2 size={15} className="animate-spin" />
+            Loading notifications...
+          </div>
+        ) : recentApplications.length === 0 ? (
+          <div className="rounded-[10px] px-3 py-4 text-sm font-semibold text-slate-500">
+            No new candidate applications yet.
+          </div>
+        ) : (
+          recentApplications.map((item) => (
+            <Link
+              key={item.id}
+              href={`/admin/candidates/${item.id}`}
+              className="block rounded-[10px] px-3 py-3 transition hover:bg-slate-50"
+            >
+              <div className="text-sm font-black text-slate-900">
+                {item.full_name || 'New candidate'}
+              </div>
+              <div className="mt-1 text-xs font-semibold text-slate-500">
+                Applied for {item.job_title_snapshot || 'a role'}
+              </div>
+              <div className="mt-1 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                {formatRelativeTime(item.created_at)}
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
+      <Link
+        href="/admin/candidates"
+        className="mt-2 flex items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+      >
+        Open candidates
+      </Link>
+    </div>
+  )
+}
+
+function formatRelativeTime(value: string) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const diffMinutes = Math.max(1, Math.round(diffMs / (1000 * 60)))
+
+  if (diffMinutes < 60) return `${diffMinutes} min ago`
+
+  const diffHours = Math.round(diffMinutes / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+
+  const diffDays = Math.round(diffHours / 24)
+  return `${diffDays}d ago`
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
